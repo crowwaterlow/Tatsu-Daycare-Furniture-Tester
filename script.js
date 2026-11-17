@@ -1,11 +1,11 @@
 const canvas = document.getElementById('testerCanvas');
 const ctx = canvas.getContext('2d');
 
-// Catalog of repo-hosted furniture items (each manages its own Image instance)
+// Catalog of repo-hosted furniture items (Path updated to Images/Furnitures/)
 const FURNITURE_CATALOG = {
   chair: { 
     name: "Office Chair", 
-    src: "./assets/furniture/chair-sheet.png", 
+    src: "./Images/Furnitures/chair-sheet.png", 
     footprint: { w: 2, d: 1 },
     offsetX: 0,
     offsetY: 0,
@@ -14,7 +14,7 @@ const FURNITURE_CATALOG = {
   },
   table: { 
     name: "Large Table", 
-    src: "./assets/furniture/table-sheet.png", 
+    src: "./Images/Furnitures/table-sheet.png", 
     footprint: { w: 2, d: 2 },
     offsetX: 0,
     offsetY: 0,
@@ -23,13 +23,10 @@ const FURNITURE_CATALOG = {
   }
 };
 
-// Preload all furniture sprites on startup
+// Preload all furniture sprites
 Object.values(FURNITURE_CATALOG).forEach(item => {
   item.img.src = item.src;
-  item.img.onload = () => {
-    item.loaded = true;
-    drawScene();
-  };
+  item.img.onload = () => { item.loaded = true; drawScene(); };
   item.img.onerror = () => console.error(`Missing furniture sprite: ${item.src}`);
 });
 
@@ -42,15 +39,12 @@ let selectedItemInstance = null;
 // Base Isometric Tile Ratios (2:1)
 const BASE_TILE_W = 64;
 const BASE_TILE_H = 32;
-
-// Dynamic View Metrics (recalculated when layout changes so 1x1 to 3x3 always fit 512x640)
 let viewMetrics = { scale: 1, tileW: 64, tileH: 32, originX: 256, originY: 160 };
 
 function updateViewMetrics() {
   const totalIsoW = (layoutConfig.cols + layoutConfig.rows) * (BASE_TILE_W / 2);
   const totalIsoH = (layoutConfig.cols + layoutConfig.rows) * (BASE_TILE_H / 2);
 
-  // Scale down larger layouts (like 3x3) so they fit cleanly inside the 512x640 canvas
   const scaleX = (canvas.width - 64) / totalIsoW;
   const scaleY = (canvas.height - 180) / totalIsoH;
   const scale = Math.min(1, scaleX, scaleY);
@@ -63,21 +57,44 @@ function updateViewMetrics() {
   viewMetrics = { scale, tileW, tileH, originX, originY };
 }
 
-// Room Background Asset
+// Asset Images for Rooms and Furnishing
 let roomImg = new Image();
+let wallpaperImg = new Image();
+let flooringImg = new Image();
+
 let roomLoaded = false;
+let wallpaperLoaded = false;
+let flooringLoaded = false;
 
 function loadRoomImage(layoutKey) {
   roomLoaded = false;
   roomImg.src = `./Images/Rooms/${layoutKey}.png`;
-  roomImg.onload = () => {
-    roomLoaded = true;
+  roomImg.onload = () => { roomLoaded = true; drawScene(); };
+  roomImg.onerror = () => { console.error(`Missing room asset: Images/Rooms/${layoutKey}.png`); drawScene(); };
+}
+
+function loadWallpaperImage(wallpaperKey) {
+  if (wallpaperKey === 'default') {
+    wallpaperLoaded = false;
     drawScene();
-  };
-  roomImg.onerror = () => {
-    console.error(`Missing room asset: ./Images/Rooms/${layoutKey}.png`);
+    return;
+  }
+  wallpaperLoaded = false;
+  wallpaperImg.src = `./Images/Furnishing/${wallpaperKey}.png`;
+  wallpaperImg.onload = () => { wallpaperLoaded = true; drawScene(); };
+  wallpaperImg.onerror = () => { wallpaperLoaded = false; drawScene(); };
+}
+
+function loadFlooringImage(flooringKey) {
+  if (flooringKey === 'default') {
+    flooringLoaded = false;
     drawScene();
-  };
+    return;
+  }
+  flooringLoaded = false;
+  flooringImg.src = `./Images/Furnishing/${flooringKey}.png`;
+  flooringImg.onload = () => { flooringLoaded = true; drawScene(); };
+  flooringImg.onerror = () => { flooringLoaded = false; drawScene(); };
 }
 
 // Initialize startup state
@@ -88,7 +105,6 @@ loadRoomImage('2x2');
 document.getElementById('layoutSelect').addEventListener('change', (e) => {
   const val = e.target.value;
   const [roomsW, roomsH] = val.split('x').map(Number);
-  
   layoutConfig = { key: val, cols: roomsW * 4, rows: roomsH * 4 };
   updateViewMetrics();
 
@@ -106,6 +122,14 @@ document.getElementById('layoutSelect').addEventListener('change', (e) => {
   loadRoomImage(val);
 });
 
+document.getElementById('wallpaperSelect').addEventListener('change', (e) => {
+  loadWallpaperImage(e.target.value);
+});
+
+document.getElementById('flooringSelect').addEventListener('change', (e) => {
+  loadFlooringImage(e.target.value);
+});
+
 document.getElementById('furnitureSelect').addEventListener('change', (e) => {
   currentFurnitureKey = e.target.value;
   currentRotation = 0;
@@ -117,7 +141,7 @@ function updateSelectionUI() {
   selectedActionsPanel.classList.toggle('hidden', !selectedItemInstance);
 }
 
-// --- Grid & Coordinate Math ---
+// --- Coordinate Math ---
 let currentRotation = 0;
 let mouseGrid = { r: -1, c: -1 };
 
@@ -148,9 +172,7 @@ function getEffectiveFootprint(footprint, rotation) {
 
 function checkCollision(startRow, startCol, footprint, rotation, ignoreId = null) {
   const { w, d } = getEffectiveFootprint(footprint, rotation);
-  if (startRow < 0 || startCol < 0 || startRow + d > layoutConfig.rows || startCol + w > layoutConfig.cols) {
-    return true;
-  }
+  if (startRow < 0 || startCol < 0 || startRow + d > layoutConfig.rows || startCol + w > layoutConfig.cols) return true;
   for (let r = startRow; r < startRow + d; r++) {
     for (let c = startCol; c < startCol + w; c++) {
       if (grid[r][c] !== null && grid[r][c] !== ignoreId) return true;
@@ -174,7 +196,6 @@ canvas.addEventListener('click', (e) => {
   const { r, c } = screenToGrid(e.clientX - rect.left, e.clientY - rect.top);
   if (r < 0 || r >= layoutConfig.rows || c < 0 || c >= layoutConfig.cols) return;
 
-  // 1. Select existing item if clicked
   const occupantId = grid[r][c];
   if (occupantId !== null) {
     selectedItemInstance = placedItems.find(item => item.id === occupantId);
@@ -183,12 +204,11 @@ canvas.addEventListener('click', (e) => {
     return;
   }
 
-  // 2. Place new furniture item
   const config = FURNITURE_CATALOG[currentFurnitureKey];
   if (config && config.loaded && !checkCollision(r, c, config.footprint, currentRotation)) {
     const newItem = {
       id: Date.now() + Math.random(),
-      type: currentFurnitureKey, // Stores which furniture type this instance is
+      type: currentFurnitureKey,
       row: r,
       col: c,
       footprint: { ...config.footprint },
@@ -216,7 +236,6 @@ function rebuildGrid() {
   });
 }
 
-// --- Rotation & Deletion Handlers ---
 function rotateSelectedItem(direction) {
   if (!selectedItemInstance) return;
   const nextRot = (selectedItemInstance.rotation + direction + 4) % 4;
@@ -249,12 +268,8 @@ document.getElementById('clearBtn').addEventListener('click', () => {
 
 window.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() === 'r') {
-    if (selectedItemInstance) {
-      rotateSelectedItem(1);
-    } else {
-      currentRotation = (currentRotation + 1) % 4;
-      drawScene();
-    }
+    if (selectedItemInstance) rotateSelectedItem(1);
+    else { currentRotation = (currentRotation + 1) % 4; drawScene(); }
   }
 });
 
@@ -282,19 +297,23 @@ function drawSprite(ctx, img, rotation, screenX, screenY, offsetX = 0, offsetY =
 function drawScene() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. Draw Repo Room Background
+  // 1. Draw Room Base
   if (roomLoaded) {
     ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
   } else {
     ctx.fillStyle = '#1e1e24';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`Waiting for ./Images/Rooms/${layoutConfig.key}.png`, canvas.width / 2, canvas.height / 2);
   }
 
-  // 2. Draw Placed Furniture (Painter's Algorithm Depth Sort)
+  // 2. Draw Flooring / Wallpaper layers if loaded
+  if (flooringLoaded) {
+    ctx.drawImage(flooringImg, 0, 0, canvas.width, canvas.height);
+  }
+  if (wallpaperLoaded) {
+    ctx.drawImage(wallpaperImg, 0, 0, canvas.width, canvas.height);
+  }
+
+  // 3. Draw Placed Furniture (Depth Sorted)
   const sortedItems = [...placedItems].sort((a, b) => (a.row + a.col) - (b.row + b.col));
   sortedItems.forEach(item => {
     const config = FURNITURE_CATALOG[item.type];
@@ -314,7 +333,7 @@ function drawScene() {
     }
   });
 
-  // 3. Draw Hover Ghost Preview
+  // 4. Draw Hover Ghost Preview
   const { r, c } = mouseGrid;
   const activeConfig = FURNITURE_CATALOG[currentFurnitureKey];
   if (r >= 0 && r < layoutConfig.rows && c >= 0 && c < layoutConfig.cols && activeConfig && activeConfig.loaded) {
