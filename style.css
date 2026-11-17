@@ -24,28 +24,29 @@ body {
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
-  padding: 24px 16px;
+  padding: 20px 16px;
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 600;
   margin-bottom: 4px;
+  text-align: center;
 }
 
 .subtitle {
   color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 24px;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
 .main-container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  justify-content: center;
-  align-items: flex-start;
-  max-width: 960px;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+  max-width: 536px;
   width: 100%;
 }
 
@@ -59,24 +60,29 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100%;
 }
 
 canvas {
   display: block;
-  width: 512px;
-  height: 640px;
+  width: 100%;
+  max-width: 512px;
+  height: auto;
+  aspect-ratio: 512 / 640;
   background-color: #16161d;
   border-radius: 8px;
   cursor: crosshair;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
-/* Sidebar Controls */
+/* Controls Panel (Stacked Below Canvas) */
 .sidebar {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 20px;
-  width: 300px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -90,7 +96,7 @@ canvas {
 }
 
 .control-group label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -102,10 +108,11 @@ select {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 0.9rem;
+  padding: 12px;
+  font-size: 0.95rem;
   outline: none;
   cursor: pointer;
+  width: 100%;
   transition: border-color 0.15s ease;
 }
 
@@ -125,7 +132,7 @@ button {
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 12px;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
@@ -166,6 +173,9 @@ button.danger:hover {
 #selectedActionsPanel {
   border-top: 1px solid var(--border);
   padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .hidden {
