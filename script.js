@@ -319,4 +319,99 @@ function drawSprite(ctx, img, rotation, screenX, screenY, offsetX = 0, offsetY =
     img,
     col * frameW, row * frameH, frameW, frameH,
     screenX - (drawW / 2) + (offsetX * scale),
-    screenY - drawH +
+    screenY - drawH + (tileH / 2) + (offsetY * scale),
+    drawW,
+    drawH
+  );
+}
+
+function drawScene() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 1. Draw Room Background Base or Error Message
+  if (roomLoaded) {
+    ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
+  } else {
+    ctx.fillStyle = '#1e1e24';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = canvasErrorMessage ? '#ef4444' : '#9ca3af';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    if (canvasErrorMessage) {
+      const lines = canvasErrorMessage.split('\n');
+      lines.forEach((line, index) => {
+        ctx.fillText(line, canvas.width / 2, (canvas.height / 2) + (index * 18));
+      });
+    } else {
+      ctx.fillText('Select a layout from the dropdown', canvas.width / 2, canvas.height / 2);
+    }
+  }
+
+  // 2. Draw Furnishings Beneath Furniture
+  if (flooringLoaded) {
+    ctx.drawImage(flooringImg, 0, 0, canvas.width, canvas.height);
+  }
+  if (wallpaperLoaded) {
+    ctx.drawImage(wallpaperImg, 0, 0, canvas.width, canvas.height);
+  }
+
+  // 3. Draw Placed Furniture (Depth Sorted)
+  const sortedItems = [...placedItems].sort((a, b) => (a.row + a.col) - (b.row + b.col));
+  sortedItems.forEach(item => {
+    const config = FURNITURE_CATALOG[item.type];
+    if (!config || !config.loaded) return;
+
+    const { w, d } = getEffectiveFootprint(item.footprint, item.rotation);
+    const screenPos = gridToScreen(item.row + d / 2, item.col + w / 2);
+
+    drawSprite(ctx, config.img, item.rotation, screenPos.x, screenPos.y, item.offsetX, item.offsetY);
+
+    if (item === selectedItemInstance) {
+      ctx.save();
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(screenPos.x - 20, screenPos.y - 20, 40, 40);
+      ctx.restore();
+    }
+  });
+
+  // 4. Draw Hover Ghost Preview
+  const { r, c } = mouseGrid;
+  const activeConfig = FURNITURE_CATALOG[currentFurnitureKey];
+  if (currentFurnitureKey !== 'none' && r >= 0 && r < layoutConfig.rows && c >= 0 && c < layoutConfig.cols && activeConfig && activeConfig.loaded) {
+    const { tileW, tileH } = viewMetrics;
+    const isColliding = checkCollision(r, c, activeConfig.footprint, currentRotation);
+    const { w, d } = getEffectiveFootprint(activeConfig.footprint, currentRotation);
+
+    for (let rowIdx = r; rowIdx < r + d; rowIdx++) {
+      for (let colIdx = c; colIdx < c + w; colIdx++) {
+        if (rowIdx >= 0 && rowIdx < layoutConfig.rows && colIdx >= 0 && colIdx < layoutConfig.cols) {
+          const tilePos = gridToScreen(rowIdx, colIdx);
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(tilePos.x, tilePos.y);
+          ctx.lineTo(tilePos.x + tileW / 2, tilePos.y + tileH / 2);
+          ctx.lineTo(tilePos.x, tilePos.y + tileH);
+          ctx.lineTo(tilePos.x - tileW / 2, tilePos.y + tileH / 2);
+          ctx.closePath();
+          ctx.fillStyle = isColliding ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.4)';
+          ctx.fill();
+          ctx.strokeStyle = isColliding ? '#ef4444' : '#22c55e';
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+
+    if (!isColliding) {
+      const screenPos = gridToScreen(r + d / 2, c + w / 2);
+      ctx.save();
+      ctx.globalAlpha = 0.6;
+      drawSprite(ctx, activeConfig.img, currentRotation, screenPos.x, screenPos.y, activeConfig.offsetX, activeConfig.offsetY);
+      ctx.restore();
+    }
+  }
+}
