@@ -75,7 +75,6 @@ function loadRoomImage(layoutKey) {
     return;
   }
   roomLoaded = false;
-  canvasErrorMessage = "";
   
   const targetPath = `./Images/Rooms/${layoutKey} Daycare.png`;
   roomImg.src = targetPath;
@@ -124,8 +123,14 @@ drawScene();
 // --- UI Event Listeners ---
 document.getElementById('layoutSelect').addEventListener('change', (e) => {
   const val = e.target.value;
+  
+  // FORCE canvas to show loading status immediately to prove the event fired
+  canvasErrorMessage = `Loading: ${val}...`;
+  drawScene();
+
   if (val === 'none') {
     roomLoaded = false;
+    canvasErrorMessage = "";
     layoutConfig = { key: 'none', cols: 8, rows: 8 };
     updateViewMetrics();
     rebuildGrid();
@@ -328,14 +333,14 @@ function drawSprite(ctx, img, rotation, screenX, screenY, offsetX = 0, offsetY =
 function drawScene() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. Draw Room Background Base or Error Message
+  // 1. Draw Room Background Base or Status/Error Message
   if (roomLoaded) {
     ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
   } else {
     ctx.fillStyle = '#1e1e24';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    ctx.fillStyle = canvasErrorMessage ? '#ef4444' : '#9ca3af';
+    ctx.fillStyle = canvasErrorMessage.includes('404') ? '#ef4444' : '#38bdf8';
     ctx.font = '12px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -346,6 +351,7 @@ function drawScene() {
         ctx.fillText(line, canvas.width / 2, (canvas.height / 2) + (index * 18));
       });
     } else {
+      ctx.fillStyle = '#9ca3af';
       ctx.fillText('Select a layout from the dropdown', canvas.width / 2, canvas.height / 2);
     }
   }
