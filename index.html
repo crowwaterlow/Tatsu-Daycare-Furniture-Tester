@@ -8,7 +8,7 @@
 <body>
 
   <h1>Tatsu Daycare Furniture Tester</h1>
-  <p class="subtitle">Multi-Room Layouts with Isometric Grid & Sprite Slicing</p>
+  <p class="subtitle">Multi-Room Layouts & Custom Furnishing Assets</p>
 
   <div class="main-container">
     <!-- Canvas Stage -->
@@ -32,6 +32,24 @@
       </div>
 
       <div class="control-group">
+        <label for="wallpaperSelect">Wallpaper</label>
+        <select id="wallpaperSelect">
+          <option value="default">Default Wallpaper</option>
+          <option value="wood_wall">Wooden Panels</option>
+          <option value="brick_wall">Brick Wall</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="flooringSelect">Flooring</label>
+        <select id="flooringSelect">
+          <option value="default">Default Flooring</option>
+          <option value="wood_floor">Hardwood Floor</option>
+          <option value="tile_floor">Ceramic Tiles</option>
+        </select>
+      </div>
+
+      <div class="control-group">
         <label for="furnitureSelect">Select Furniture</label>
         <select id="furnitureSelect">
           <option value="chair">Office Chair (2x1)</option>
@@ -39,7 +57,7 @@
         </select>
       </div>
 
-      <!-- Selected Item Actions (Hidden via CSS until an item is clicked) -->
+      <!-- Selected Item Actions -->
       <div class="control-group hidden" id="selectedActionsPanel">
         <label>Selected Furniture</label>
         <div class="button-row">
@@ -55,13 +73,13 @@
 
       <div class="instructions">
         <strong>Controls:</strong><br>
-        • Switching layout auto-loads the room asset.<br>
-        • Click a floor tile to place selected furniture.<br>
-        • Click a placed item to Rotate (CW/CCW) or Remove.
+        • Layouts load from <code>Images/Rooms/</code><br>
+        • Furnishings load from <code>Images/Furnishing/</code><br>
+        • Furniture loads from <code>Images/Furnitures/</code>
       </div>
     </div>
   </div>
 
-  <script src="script.js" defer></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
