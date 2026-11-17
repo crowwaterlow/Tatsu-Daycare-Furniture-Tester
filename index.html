@@ -32,11 +32,10 @@
         </select>
       </div>
 
-
       <div class="control-group">
         <label for="wallpaperSelect">Wallpaper</label>
         <select id="wallpaperSelect">
-          <option value="default">Default Wallpaper</option>
+          <option value="none" selected>None (No Wallpaper)</option>
           <option value="wood_wall">Wooden Panels</option>
           <option value="brick_wall">Brick Wall</option>
         </select>
@@ -45,7 +44,7 @@
       <div class="control-group">
         <label for="flooringSelect">Flooring</label>
         <select id="flooringSelect">
-          <option value="default">Default Flooring</option>
+          <option value="none" selected>None (No Flooring)</option>
           <option value="wood_floor">Hardwood Floor</option>
           <option value="tile_floor">Ceramic Tiles</option>
         </select>
@@ -54,6 +53,7 @@
       <div class="control-group">
         <label for="furnitureSelect">Select Furniture</label>
         <select id="furnitureSelect">
+          <option value="none" selected>None (Select Item)</option>
           <option value="chair">Office Chair (2x1)</option>
           <option value="table">Large Table (2x2)</option>
         </select>
@@ -75,9 +75,9 @@
 
       <div class="instructions">
         <strong>Controls:</strong><br>
-        • Layouts load from <code>Images/Rooms/</code><br>
-        • Furnishings load from <code>Images/Furnishing/</code><br>
-        • Furniture loads from <code>Images/Furnitures/</code>
+        • Rooms: <code>Images/Rooms/[size] Daycare.png</code><br>
+        • Furnishings: <code>Images/Furnishing/</code><br>
+        • Furniture: <code>Images/Furnitures/</code>
       </div>
     </div>
   </div>
