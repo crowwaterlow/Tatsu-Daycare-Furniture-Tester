@@ -1,4 +1,4 @@
-// Global scope function so mobile HTML inline onchange can trigger it instantly
+// Global scope declarations for mobile inline triggers
 let loadRoomImage, updateViewMetrics, rebuildGrid, drawScene, layoutConfig, roomLoaded, canvasErrorMessage, selectedItemInstance, updateSelectionUI, placedItems, getEffectiveFootprint;
 
 window.addEventListener('DOMContentLoaded', () => {
