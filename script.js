@@ -116,9 +116,13 @@ function loadFlooringImage(flooringKey) {
   flooringImg.onerror = () => { flooringLoaded = false; drawScene(); };
 }
 
-// Initialize startup view
+// Initialize startup view & force-load 1x1 Daycare to test image path
 updateViewMetrics();
-drawScene();
+document.getElementById('layoutSelect').value = '1x1';
+layoutConfig = { key: '1x1', cols: 4, rows: 4 };
+updateViewMetrics();
+rebuildGrid();
+loadRoomImage('1x1');
 
 // --- UI Event Listeners ---
 document.getElementById('layoutSelect').addEventListener('change', (e) => {
