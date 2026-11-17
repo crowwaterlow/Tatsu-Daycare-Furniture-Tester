@@ -1,7 +1,7 @@
 const canvas = document.getElementById('testerCanvas');
 const ctx = canvas.getContext('2d');
 
-// Catalog of repo-hosted furniture items (Path updated to Images/Furnitures/)
+// Catalog of repo-hosted furniture items (Loaded from ./Images/Furnitures/)
 const FURNITURE_CATALOG = {
   chair: { 
     name: "Office Chair", 
@@ -23,15 +23,15 @@ const FURNITURE_CATALOG = {
   }
 };
 
-// Preload all furniture sprites
+// Preload furniture sprites
 Object.values(FURNITURE_CATALOG).forEach(item => {
   item.img.src = item.src;
   item.img.onload = () => { item.loaded = true; drawScene(); };
   item.img.onerror = () => console.error(`Missing furniture sprite: ${item.src}`);
 });
 
-let currentFurnitureKey = 'chair';
-let layoutConfig = { key: '2x2', cols: 8, rows: 8 };
+let currentFurnitureKey = 'none';
+let layoutConfig = { key: 'none', cols: 8, rows: 8 };
 let grid = Array.from({ length: 8 }, () => Array(8).fill(null));
 let placedItems = [];
 let selectedItemInstance = null;
@@ -57,7 +57,7 @@ function updateViewMetrics() {
   viewMetrics = { scale, tileW, tileH, originX, originY };
 }
 
-// Asset Images for Rooms and Furnishing
+// Asset Images
 let roomImg = new Image();
 let wallpaperImg = new Image();
 let flooringImg = new Image();
@@ -67,6 +67,11 @@ let wallpaperLoaded = false;
 let flooringLoaded = false;
 
 function loadRoomImage(layoutKey) {
+  if (layoutKey === 'none') {
+    roomLoaded = false;
+    drawScene();
+    return;
+  }
   roomLoaded = false;
   roomImg.src = `./Images/Rooms/${layoutKey} Daycare.png`;
   roomImg.onload = () => { roomLoaded = true; drawScene(); };
@@ -74,7 +79,7 @@ function loadRoomImage(layoutKey) {
 }
 
 function loadWallpaperImage(wallpaperKey) {
-  if (wallpaperKey === 'default') {
+  if (wallpaperKey === 'none') {
     wallpaperLoaded = false;
     drawScene();
     return;
@@ -86,7 +91,7 @@ function loadWallpaperImage(wallpaperKey) {
 }
 
 function loadFlooringImage(flooringKey) {
-  if (flooringKey === 'default') {
+  if (flooringKey === 'none') {
     flooringLoaded = false;
     drawScene();
     return;
@@ -97,13 +102,22 @@ function loadFlooringImage(flooringKey) {
   flooringImg.onerror = () => { flooringLoaded = false; drawScene(); };
 }
 
-// Initialize startup state
+// Initialize startup view (blank state)
 updateViewMetrics();
-loadRoomImage('2x2');
+drawScene();
 
 // --- UI Event Listeners ---
 document.getElementById('layoutSelect').addEventListener('change', (e) => {
   const val = e.target.value;
+  if (val === 'none') {
+    roomLoaded = false;
+    layoutConfig = { key: 'none', cols: 8, rows: 8 };
+    updateViewMetrics();
+    rebuildGrid();
+    drawScene();
+    return;
+  }
+
   const [roomsW, roomsH] = val.split('x').map(Number);
   layoutConfig = { key: val, cols: roomsW * 4, rows: roomsH * 4 };
   updateViewMetrics();
@@ -192,6 +206,8 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 canvas.addEventListener('click', (e) => {
+  if (currentFurnitureKey === 'none') return; // Do nothing if no furniture selected
+
   const rect = canvas.getBoundingClientRect();
   const { r, c } = screenToGrid(e.clientX - rect.left, e.clientY - rect.top);
   if (r < 0 || r >= layoutConfig.rows || c < 0 || c >= layoutConfig.cols) return;
@@ -269,7 +285,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
 window.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() === 'r') {
     if (selectedItemInstance) rotateSelectedItem(1);
-    else { currentRotation = (currentRotation + 1) % 4; drawScene(); }
+    else if (currentFurnitureKey !== 'none') { currentRotation = (currentRotation + 1) % 4; drawScene(); }
   }
 });
 
@@ -297,7 +313,7 @@ function drawSprite(ctx, img, rotation, screenX, screenY, offsetX = 0, offsetY =
 function drawScene() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. Draw Room Base
+  // 1. Draw Room Background Base
   if (roomLoaded) {
     ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
   } else {
@@ -305,7 +321,7 @@ function drawScene() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  // 2. Draw Flooring / Wallpaper layers if loaded
+  // 2. Draw Furnishings Beneath All Furniture (Flooring first, then Wallpaper)
   if (flooringLoaded) {
     ctx.drawImage(flooringImg, 0, 0, canvas.width, canvas.height);
   }
@@ -313,7 +329,7 @@ function drawScene() {
     ctx.drawImage(wallpaperImg, 0, 0, canvas.width, canvas.height);
   }
 
-  // 3. Draw Placed Furniture (Depth Sorted)
+  // 3. Draw Placed Furniture (Depth Sorted via Painter's Algorithm)
   const sortedItems = [...placedItems].sort((a, b) => (a.row + a.col) - (b.row + b.col));
   sortedItems.forEach(item => {
     const config = FURNITURE_CATALOG[item.type];
@@ -333,10 +349,10 @@ function drawScene() {
     }
   });
 
-  // 4. Draw Hover Ghost Preview
+  // 4. Draw Hover Ghost Preview (Only when furniture is selected)
   const { r, c } = mouseGrid;
   const activeConfig = FURNITURE_CATALOG[currentFurnitureKey];
-  if (r >= 0 && r < layoutConfig.rows && c >= 0 && c < layoutConfig.cols && activeConfig && activeConfig.loaded) {
+  if (currentFurnitureKey !== 'none' && r >= 0 && r < layoutConfig.rows && c >= 0 && c < layoutConfig.cols && activeConfig && activeConfig.loaded) {
     const { tileW, tileH } = viewMetrics;
     const isColliding = checkCollision(r, c, activeConfig.footprint, currentRotation);
     const { w, d } = getEffectiveFootprint(activeConfig.footprint, currentRotation);
