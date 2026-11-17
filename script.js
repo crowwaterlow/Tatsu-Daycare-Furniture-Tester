@@ -1,49 +1,72 @@
 const canvas = document.getElementById('testerCanvas');
 const ctx = canvas.getContext('2d');
 
-// Catalog of repo-hosted furniture items
+// Catalog of repo-hosted furniture items (each manages its own Image instance)
 const FURNITURE_CATALOG = {
   chair: { 
     name: "Office Chair", 
     src: "./assets/furniture/chair-sheet.png", 
     footprint: { w: 2, d: 1 },
     offsetX: 0,
-    offsetY: 0
+    offsetY: 0,
+    img: new Image(),
+    loaded: false
   },
   table: { 
     name: "Large Table", 
     src: "./assets/furniture/table-sheet.png", 
     footprint: { w: 2, d: 2 },
     offsetX: 0,
-    offsetY: 0
+    offsetY: 0,
+    img: new Image(),
+    loaded: false
   }
 };
 
-let currentFurnitureKey = 'chair';
-let activeFurnitureConfig = FURNITURE_CATALOG[currentFurnitureKey];
+// Preload all furniture sprites on startup
+Object.values(FURNITURE_CATALOG).forEach(item => {
+  item.img.src = item.src;
+  item.img.onload = () => {
+    item.loaded = true;
+    drawScene();
+  };
+  item.img.onerror = () => console.error(`Missing furniture sprite: ${item.src}`);
+});
 
-// Layout state (Default 2x2 room: 8x8 tiles)
+let currentFurnitureKey = 'chair';
 let layoutConfig = { key: '2x2', cols: 8, rows: 8 };
 let grid = Array.from({ length: 8 }, () => Array(8).fill(null));
 let placedItems = [];
 let selectedItemInstance = null;
 
-// Isometric Constants
-const ORIGIN_X = 256;
-const ORIGIN_Y = 160;
-const TILE_W = 64;
-const TILE_H = 32;
+// Base Isometric Tile Ratios (2:1)
+const BASE_TILE_W = 64;
+const BASE_TILE_H = 32;
 
-// Image Assets
+// Dynamic View Metrics (recalculated when layout changes so 1x1 to 3x3 always fit 512x640)
+let viewMetrics = { scale: 1, tileW: 64, tileH: 32, originX: 256, originY: 160 };
+
+function updateViewMetrics() {
+  const totalIsoW = (layoutConfig.cols + layoutConfig.rows) * (BASE_TILE_W / 2);
+  const totalIsoH = (layoutConfig.cols + layoutConfig.rows) * (BASE_TILE_H / 2);
+
+  // Scale down larger layouts (like 3x3) so they fit cleanly inside the 512x640 canvas
+  const scaleX = (canvas.width - 64) / totalIsoW;
+  const scaleY = (canvas.height - 180) / totalIsoH;
+  const scale = Math.min(1, scaleX, scaleY);
+
+  const tileW = BASE_TILE_W * scale;
+  const tileH = BASE_TILE_H * scale;
+  const originX = (canvas.width / 2) + (layoutConfig.rows - layoutConfig.cols) * (tileW / 4);
+  const originY = (canvas.height - (layoutConfig.cols + layoutConfig.rows) * (tileH / 2)) / 2 + 40;
+
+  viewMetrics = { scale, tileW, tileH, originX, originY };
+}
+
+// Room Background Asset
 let roomImg = new Image();
-let furnitureImg = new Image();
 let roomLoaded = false;
-let furnitureLoaded = false;
 
-let currentRotation = 0;
-let mouseGrid = { r: -1, c: -1 };
-
-// Load Room Image from your custom Images/Rooms/ path
 function loadRoomImage(layoutKey) {
   roomLoaded = false;
   roomImg.src = `./Images/Rooms/${layoutKey}.png`;
@@ -52,42 +75,28 @@ function loadRoomImage(layoutKey) {
     drawScene();
   };
   roomImg.onerror = () => {
-    console.error(`Failed to load room image: ./Images/Rooms/${layoutKey}.png`);
-  };
-}
-
-// Load Furniture Image from catalog
-function loadFurnitureImage(furnitureKey) {
-  furnitureLoaded = false;
-  activeFurnitureConfig = FURNITURE_CATALOG[furnitureKey];
-  furnitureImg.src = activeFurnitureConfig.src;
-  furnitureImg.onload = () => {
-    furnitureLoaded = true;
+    console.error(`Missing room asset: ./Images/Rooms/${layoutKey}.png`);
     drawScene();
   };
-  furnitureImg.onerror = () => {
-    console.error(`Failed to load furniture image: ${activeFurnitureConfig.src}`);
-  };
 }
 
-// Initialize default assets on startup
+// Initialize startup state
+updateViewMetrics();
 loadRoomImage('2x2');
-loadFurnitureImage('chair');
 
 // --- UI Event Listeners ---
 document.getElementById('layoutSelect').addEventListener('change', (e) => {
-  const val = e.target.value; // e.g., "2x3"
+  const val = e.target.value;
   const [roomsW, roomsH] = val.split('x').map(Number);
   
   layoutConfig = { key: val, cols: roomsW * 4, rows: roomsH * 4 };
+  updateViewMetrics();
 
-  // Filter out any placed items that fall out of bounds with the new layout size
   placedItems = placedItems.filter(item => {
     const { w, d } = getEffectiveFootprint(item.footprint, item.rotation);
     return item.row + d <= layoutConfig.rows && item.col + w <= layoutConfig.cols;
   });
 
-  // Clear selection if selected item was removed
   if (selectedItemInstance && !placedItems.includes(selectedItemInstance)) {
     selectedItemInstance = null;
     updateSelectionUI();
@@ -100,32 +109,33 @@ document.getElementById('layoutSelect').addEventListener('change', (e) => {
 document.getElementById('furnitureSelect').addEventListener('change', (e) => {
   currentFurnitureKey = e.target.value;
   currentRotation = 0;
-  loadFurnitureImage(currentFurnitureKey);
+  drawScene();
 });
 
-// Selection UI Toggle
 const selectedActionsPanel = document.getElementById('selectedActionsPanel');
 function updateSelectionUI() {
-  if (selectedItemInstance) {
-    selectedActionsPanel.classList.remove('hidden');
-  } else {
-    selectedActionsPanel.classList.add('hidden');
-  }
+  selectedActionsPanel.classList.toggle('hidden', !selectedItemInstance);
 }
 
 // --- Grid & Coordinate Math ---
+let currentRotation = 0;
+let mouseGrid = { r: -1, c: -1 };
+
 function screenToGrid(screenX, screenY) {
-  const relX = screenX - ORIGIN_X;
-  const relY = screenY - ORIGIN_Y;
-  const col = (relX / (TILE_W / 2) + relY / (TILE_H / 2)) / 2;
-  const row = (relY / (TILE_H / 2) - relX / (TILE_W / 2)) / 2;
+  const { originX, originY, tileW, tileH } = viewMetrics;
+  const relX = screenX - originX;
+  const relY = screenY - originY;
+  const col = (relX / (tileW / 2) + relY / (tileH / 2)) / 2;
+  const row = (relY / (tileH / 2) - relX / (tileW / 2)) / 2;
   return { r: Math.floor(row), c: Math.floor(col) };
 }
 
 function gridToScreen(row, col) {
-  const screenX = ORIGIN_X + (col - row) * (TILE_W / 2);
-  const screenY = ORIGIN_Y + (col + row) * (TILE_H / 2);
-  return { x: screenX, y: screenY };
+  const { originX, originY, tileW, tileH } = viewMetrics;
+  return {
+    x: originX + (col - row) * (tileW / 2),
+    y: originY + (col + row) * (tileH / 2)
+  };
 }
 
 function getEffectiveFootprint(footprint, rotation) {
@@ -143,9 +153,7 @@ function checkCollision(startRow, startCol, footprint, rotation, ignoreId = null
   }
   for (let r = startRow; r < startRow + d; r++) {
     for (let c = startCol; c < startCol + w; c++) {
-      if (grid[r][c] !== null && grid[r][c] !== ignoreId) {
-        return true;
-      }
+      if (grid[r][c] !== null && grid[r][c] !== ignoreId) return true;
     }
   }
   return false;
@@ -164,10 +172,9 @@ canvas.addEventListener('mousemove', (e) => {
 canvas.addEventListener('click', (e) => {
   const rect = canvas.getBoundingClientRect();
   const { r, c } = screenToGrid(e.clientX - rect.left, e.clientY - rect.top);
-  
   if (r < 0 || r >= layoutConfig.rows || c < 0 || c >= layoutConfig.cols) return;
 
-  // 1. If clicking an existing item, select it
+  // 1. Select existing item if clicked
   const occupantId = grid[r][c];
   if (occupantId !== null) {
     selectedItemInstance = placedItems.find(item => item.id === occupantId);
@@ -176,25 +183,24 @@ canvas.addEventListener('click', (e) => {
     return;
   }
 
-  // 2. Otherwise, place new furniture if valid
-  if (furnitureLoaded) {
-    const footprint = activeFurnitureConfig.footprint;
-    if (!checkCollision(r, c, footprint, currentRotation)) {
-      const newItem = {
-        id: Date.now() + Math.random(),
-        row: r,
-        col: c,
-        footprint: { ...footprint },
-        rotation: currentRotation,
-        offsetX: activeFurnitureConfig.offsetX,
-        offsetY: activeFurnitureConfig.offsetY
-      };
-      placedItems.push(newItem);
-      selectedItemInstance = newItem; // Auto-select the newly placed item
-      rebuildGrid();
-      updateSelectionUI();
-      drawScene();
-    }
+  // 2. Place new furniture item
+  const config = FURNITURE_CATALOG[currentFurnitureKey];
+  if (config && config.loaded && !checkCollision(r, c, config.footprint, currentRotation)) {
+    const newItem = {
+      id: Date.now() + Math.random(),
+      type: currentFurnitureKey, // Stores which furniture type this instance is
+      row: r,
+      col: c,
+      footprint: { ...config.footprint },
+      rotation: currentRotation,
+      offsetX: config.offsetX,
+      offsetY: config.offsetY
+    };
+    placedItems.push(newItem);
+    selectedItemInstance = newItem;
+    rebuildGrid();
+    updateSelectionUI();
+    drawScene();
   }
 });
 
@@ -204,9 +210,7 @@ function rebuildGrid() {
     const { w, d } = getEffectiveFootprint(item.footprint, item.rotation);
     for (let r = item.row; r < item.row + d; r++) {
       for (let c = item.col; c < item.col + w; c++) {
-        if (r < layoutConfig.rows && c < layoutConfig.cols) {
-          grid[r][c] = item.id;
-        }
+        if (r < layoutConfig.rows && c < layoutConfig.cols) grid[r][c] = item.id;
       }
     }
   });
@@ -215,7 +219,6 @@ function rebuildGrid() {
 // --- Rotation & Deletion Handlers ---
 function rotateSelectedItem(direction) {
   if (!selectedItemInstance) return;
-  // direction: 1 for CW, -1 for CCW
   const nextRot = (selectedItemInstance.rotation + direction + 4) % 4;
   if (!checkCollision(selectedItemInstance.row, selectedItemInstance.col, selectedItemInstance.footprint, nextRot, selectedItemInstance.id)) {
     selectedItemInstance.rotation = nextRot;
@@ -244,7 +247,6 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   drawScene();
 });
 
-// Keyboard shortcut ('R' to rotate preview or selected item)
 window.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() === 'r') {
     if (selectedItemInstance) {
@@ -258,16 +260,22 @@ window.addEventListener('keydown', (e) => {
 
 // --- Rendering Logic ---
 function drawSprite(ctx, img, rotation, screenX, screenY, offsetX = 0, offsetY = 0) {
+  const { scale, tileH } = viewMetrics;
   const frameW = img.width / 2;
   const frameH = img.height / 2;
+  const drawW = frameW * scale;
+  const drawH = frameH * scale;
+
   const col = rotation % 2;
   const row = Math.floor(rotation / 2);
 
   ctx.drawImage(
     img,
     col * frameW, row * frameH, frameW, frameH,
-    screenX - (frameW / 2) + offsetX, screenY - frameH + 16 + offsetY,
-    frameW, frameH
+    screenX - (drawW / 2) + (offsetX * scale),
+    screenY - drawH + (tileH / 2) + (offsetY * scale),
+    drawW,
+    drawH
   );
 }
 
@@ -283,39 +291,37 @@ function drawScene() {
     ctx.fillStyle = '#9ca3af';
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Loading room asset...', canvas.width / 2, canvas.height / 2);
+    ctx.fillText(`Waiting for ./Images/Rooms/${layoutConfig.key}.png`, canvas.width / 2, canvas.height / 2);
   }
 
-  // 2. Draw Placed Furniture (Sorted by Painter's Algorithm for proper depth)
+  // 2. Draw Placed Furniture (Painter's Algorithm Depth Sort)
   const sortedItems = [...placedItems].sort((a, b) => (a.row + a.col) - (b.row + b.col));
   sortedItems.forEach(item => {
+    const config = FURNITURE_CATALOG[item.type];
+    if (!config || !config.loaded) return;
+
     const { w, d } = getEffectiveFootprint(item.footprint, item.rotation);
-    const centerRow = item.row + d / 2;
-    const centerCol = item.col + w / 2;
-    const screenPos = gridToScreen(centerRow, centerCol);
-    
-    if (furnitureLoaded) {
-      drawSprite(ctx, furnitureImg, item.rotation, screenPos.x, screenPos.y, item.offsetX, item.offsetY);
-      
-      // Highlight selection border if this item is currently selected
-      if (item === selectedItemInstance) {
-        ctx.save();
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(screenPos.x - 20, screenPos.y - 20, 40, 40);
-        ctx.restore();
-      }
+    const screenPos = gridToScreen(item.row + d / 2, item.col + w / 2);
+
+    drawSprite(ctx, config.img, item.rotation, screenPos.x, screenPos.y, item.offsetX, item.offsetY);
+
+    if (item === selectedItemInstance) {
+      ctx.save();
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(screenPos.x - 20, screenPos.y - 20, 40, 40);
+      ctx.restore();
     }
   });
 
   // 3. Draw Hover Ghost Preview
   const { r, c } = mouseGrid;
-  if (r >= 0 && r < layoutConfig.rows && c >= 0 && c < layoutConfig.cols && furnitureLoaded) {
-    const footprint = activeFurnitureConfig.footprint;
-    const isColliding = checkCollision(r, c, footprint, currentRotation);
-    const { w, d } = getEffectiveFootprint(footprint, currentRotation);
+  const activeConfig = FURNITURE_CATALOG[currentFurnitureKey];
+  if (r >= 0 && r < layoutConfig.rows && c >= 0 && c < layoutConfig.cols && activeConfig && activeConfig.loaded) {
+    const { tileW, tileH } = viewMetrics;
+    const isColliding = checkCollision(r, c, activeConfig.footprint, currentRotation);
+    const { w, d } = getEffectiveFootprint(activeConfig.footprint, currentRotation);
 
-    // Draw footprint tile highlights
     for (let rowIdx = r; rowIdx < r + d; rowIdx++) {
       for (let colIdx = c; colIdx < c + w; colIdx++) {
         if (rowIdx >= 0 && rowIdx < layoutConfig.rows && colIdx >= 0 && colIdx < layoutConfig.cols) {
@@ -323,27 +329,24 @@ function drawScene() {
           ctx.save();
           ctx.beginPath();
           ctx.moveTo(tilePos.x, tilePos.y);
-          ctx.lineTo(tilePos.x + TILE_W / 2, tilePos.y + TILE_H / 2);
-          ctx.lineTo(tilePos.x, tilePos.y + TILE_H);
-          ctx.lineTo(tilePos.x - TILE_W / 2, tilePos.y + TILE_H / 2);
+          ctx.lineTo(tilePos.x + tileW / 2, tilePos.y + tileH / 2);
+          ctx.lineTo(tilePos.x, tilePos.y + tileH);
+          ctx.lineTo(tilePos.x - tileW / 2, tilePos.y + tileH / 2);
           ctx.closePath();
           ctx.fillStyle = isColliding ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.4)';
           ctx.fill();
-          ctx.strokeStyle = isCollizing = isColliding ? '#ef4444' : '#22c55e';
+          ctx.strokeStyle = isColliding ? '#ef4444' : '#22c55e';
           ctx.stroke();
           ctx.restore();
         }
       }
     }
 
-    // Draw ghost sprite preview if valid placement
     if (!isColliding) {
-      const centerRow = r + d / 2;
-      const centerCol = c + w / 2;
-      const screenPos = gridToScreen(centerRow, centerCol);
+      const screenPos = gridToScreen(r + d / 2, c + w / 2);
       ctx.save();
       ctx.globalAlpha = 0.6;
-      drawSprite(ctx, furnitureImg, currentRotation, screenPos.x, screenPos.y, activeFurnitureConfig.offsetX, activeFurnitureConfig.offsetY);
+      drawSprite(ctx, activeConfig.img, currentRotation, screenPos.x, screenPos.y, activeConfig.offsetX, activeConfig.offsetY);
       ctx.restore();
     }
   }
