@@ -75,6 +75,7 @@ function loadRoomImage(layoutKey) {
     return;
   }
   roomLoaded = false;
+  canvasErrorMessage = "";
   
   const targetPath = `./Images/Rooms/${layoutKey} Daycare.png`;
   roomImg.src = targetPath;
@@ -116,21 +117,15 @@ function loadFlooringImage(flooringKey) {
   flooringImg.onerror = () => { flooringLoaded = false; drawScene(); };
 }
 
-// Initialize startup view & force-load 1x1 Daycare to test image path
+// Initialize startup view (Clean Start)
 updateViewMetrics();
-document.getElementById('layoutSelect').value = '1x1';
-layoutConfig = { key: '1x1', cols: 4, rows: 4 };
-updateViewMetrics();
-rebuildGrid();
-loadRoomImage('1x1');
+drawScene();
 
-// --- UI Event Listeners ---
-document.getElementById('layoutSelect').addEventListener('change', (e) => {
+// --- UI Event Listeners (Mobile Optimized) ---
+const layoutSelect = document.getElementById('layoutSelect');
+
+layoutSelect.onchange = (e) => {
   const val = e.target.value;
-  
-  // FORCE canvas to show loading status immediately to prove the event fired
-  canvasErrorMessage = `Loading: ${val}...`;
-  drawScene();
 
   if (val === 'none') {
     roomLoaded = false;
@@ -158,7 +153,7 @@ document.getElementById('layoutSelect').addEventListener('change', (e) => {
 
   rebuildGrid();
   loadRoomImage(val);
-});
+};
 
 document.getElementById('wallpaperSelect').addEventListener('change', (e) => {
   loadWallpaperImage(e.target.value);
@@ -337,14 +332,14 @@ function drawSprite(ctx, img, rotation, screenX, screenY, offsetX = 0, offsetY =
 function drawScene() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1. Draw Room Background Base or Status/Error Message
+  // 1. Draw Room Background Base or Error Message
   if (roomLoaded) {
     ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
   } else {
     ctx.fillStyle = '#1e1e24';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    ctx.fillStyle = canvasErrorMessage.includes('404') ? '#ef4444' : '#38bdf8';
+    ctx.fillStyle = canvasErrorMessage ? '#ef4444' : '#9ca3af';
     ctx.font = '12px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -355,7 +350,6 @@ function drawScene() {
         ctx.fillText(line, canvas.width / 2, (canvas.height / 2) + (index * 18));
       });
     } else {
-      ctx.fillStyle = '#9ca3af';
       ctx.fillText('Select a layout from the dropdown', canvas.width / 2, canvas.height / 2);
     }
   }
