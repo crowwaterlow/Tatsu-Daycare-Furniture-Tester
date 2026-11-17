@@ -4,41 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daycare Furniture Tester</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="style.css?v=123">
+  <link rel="stylesheet" href="style.css?v=125">
 </head>
-<body class="bg-gray-950 text-white min-h-screen flex flex-col items-center p-4">
+<body>
 
-  <header class="mb-4 text-center">
-    <h1 class="text-xl font-bold">Daycare Furniture Tester</h1>
-    <p class="text-xs text-gray-400">Isometric Room Assets</p>
-  </header>
+  <h1>Daycare Furniture Tester</h1>
+  <p class="subtitle">Isometric Room &amp; Furniture Asset Previewer</p>
 
-  <div class="flex flex-col items-center w-full max-w-md mx-auto space-y-4">
+  <div class="main-container">
     
-    <!-- 1. Canvas Container (At the Top) -->
-    <div class="w-full bg-gray-900 rounded-lg overflow-hidden shadow-lg border border-gray-700">
-      <canvas id="testerCanvas" width="512" height="640" class="w-full h-auto block"></canvas>
+    <!-- 1. Canvas Stage (Top) -->
+    <div class="canvas-wrapper">
+      <canvas id="testerCanvas" width="512" height="640"></canvas>
     </div>
 
-    <!-- Selected Item Actions Panel (Hidden by default) -->
-    <div id="selectedActionsPanel" class="w-full bg-gray-800 p-3 rounded-lg border border-blue-500 hidden flex items-center justify-between">
-      <span class="text-xs text-blue-400 font-semibold">Item Selected</span>
-      <div class="flex space-x-2">
-        <button id="rotateCCWBtn" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-xs font-semibold">↺ Rotate</button>
-        <button id="rotateCWBtn" class="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded text-xs font-semibold">↻ Rotate</button>
-        <button id="deleteSelectedBtn" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-semibold">Delete</button>
-      </div>
-    </div>
-
-    <!-- 2. Controls & Dropdowns Panel (Directly Below Canvas) -->
-    <div id="controlsPanel" class="w-full bg-gray-900 p-4 rounded-lg border border-gray-700 space-y-4">
+    <!-- 2. Controls Panel (Below Canvas) -->
+    <div class="sidebar">
       
-      <!-- Daycare Layout Dropdown -->
-      <div>
-        <label class="block text-xs font-semibold text-gray-400 mb-1">DAYCARE LAYOUT</label>
-        <select id="layoutSelect" onchange="changeLayout(this.value)" class="w-full bg-gray-800 text-white text-sm rounded-lg p-2.5 border border-gray-700">
+      <div class="control-group">
+        <label for="layoutSelect">Daycare Layout</label>
+        <select id="layoutSelect" onchange="changeLayout(this.value)">
           <option value="none">Select a layout...</option>
           <option value="1x1">1x1 Room</option>
           <option value="1x2">1x2 Room</option>
@@ -50,40 +35,46 @@
         </select>
       </div>
 
-      <!-- Wallpaper Dropdown -->
-      <div>
-        <label class="block text-xs font-semibold text-gray-400 mb-1">WALLPAPER</label>
-        <select id="wallpaperSelect" class="w-full bg-gray-800 text-white text-sm rounded-lg p-2.5 border border-gray-700">
+      <div class="control-group">
+        <label for="wallpaperSelect">Wallpaper</label>
+        <select id="wallpaperSelect">
           <option value="none">None (No Wallpaper)</option>
         </select>
       </div>
 
-      <!-- Flooring Dropdown -->
-      <div>
-        <label class="block text-xs font-semibold text-gray-400 mb-1">FLOORING</label>
-        <select id="flooringSelect" class="w-full bg-gray-800 text-white text-sm rounded-lg p-2.5 border border-gray-700">
+      <div class="control-group">
+        <label for="flooringSelect">Flooring</label>
+        <select id="flooringSelect">
           <option value="none">None (No Flooring)</option>
         </select>
       </div>
 
-      <!-- Furniture Dropdown -->
-      <div>
-        <label class="block text-xs font-semibold text-gray-400 mb-1">SELECT FURNITURE</label>
-        <select id="furnitureSelect" class="w-full bg-gray-800 text-white text-sm rounded-lg p-2.5 border border-gray-700">
+      <div class="control-group">
+        <label for="furnitureSelect">Select Furniture</label>
+        <select id="furnitureSelect">
           <option value="none">None (Select Item)</option>
           <option value="chair">Office Chair</option>
           <option value="table">Large Table</option>
         </select>
       </div>
 
-      <!-- Clear Button -->
-      <button id="clearBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
-        Clear All Furniture
-      </button>
-    </div>
+      <!-- Selected Item Actions -->
+      <div id="selectedActionsPanel" class="hidden">
+        <div class="control-group">
+          <label>Selected Furniture</label>
+          <div class="button-row">
+            <button id="rotateCCWBtn" class="secondary">↺ Rotate</button>
+            <button id="rotateCWBtn" class="secondary">↻ Rotate</button>
+            <button id="deleteSelectedBtn" class="danger">Delete</button>
+          </div>
+        </div>
+      </div>
 
+      <button id="clearBtn" class="danger">Clear All Furniture</button>
+
+    </div>
   </div>
 
-  <script src="script.js?v=123" defer></script>
+  <script src="script.js?v=125" defer></script>
 </body>
 </html>
