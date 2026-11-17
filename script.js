@@ -1,3 +1,6 @@
+// Global scope function so mobile HTML inline onchange can trigger it instantly
+let loadRoomImage, updateViewMetrics, rebuildGrid, drawScene, layoutConfig, roomLoaded, canvasErrorMessage, selectedItemInstance, updateSelectionUI, placedItems, getEffectiveFootprint;
+
 window.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('testerCanvas');
   const ctx = canvas.getContext('2d');
@@ -32,17 +35,17 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   let currentFurnitureKey = 'none';
-  let layoutConfig = { key: 'none', cols: 8, rows: 8 };
+  layoutConfig = { key: 'none', cols: 8, rows: 8 };
   let grid = Array.from({ length: 8 }, () => Array(8).fill(null));
-  let placedItems = [];
-  let selectedItemInstance = null;
+  placedItems = [];
+  selectedItemInstance = null;
 
   // Base Isometric Tile Ratios (2:1)
   const BASE_TILE_W = 64;
   const BASE_TILE_H = 32;
   let viewMetrics = { scale: 1, tileW: 64, tileH: 32, originX: 256, originY: 160 };
 
-  function updateViewMetrics() {
+  updateViewMetrics = function() {
     const totalIsoW = (layoutConfig.cols + layoutConfig.rows) * (BASE_TILE_W / 2);
     const totalIsoH = (layoutConfig.cols + layoutConfig.rows) * (BASE_TILE_H / 2);
 
@@ -63,12 +66,12 @@ window.addEventListener('DOMContentLoaded', () => {
   let wallpaperImg = new Image();
   let flooringImg = new Image();
 
-  let roomLoaded = false;
+  roomLoaded = false;
   let wallpaperLoaded = false;
   let flooringLoaded = false;
-  let canvasErrorMessage = "";
+  canvasErrorMessage = "";
 
-  function loadRoomImage(layoutKey) {
+  loadRoomImage = function(layoutKey) {
     if (layoutKey === 'none') {
       roomLoaded = false;
       canvasErrorMessage = "";
@@ -122,53 +125,44 @@ window.addEventListener('DOMContentLoaded', () => {
   updateViewMetrics();
   drawScene();
 
-  // --- UI Event Listeners ---
-  const layoutSelect = document.getElementById('layoutSelect');
-  if (layoutSelect) {
-    layoutSelect.onchange = (e) => {
-      const val = e.target.value;
-
-      if (val === 'none') {
-        roomLoaded = false;
-        canvasErrorMessage = "";
-        layoutConfig = { key: 'none', cols: 8, rows: 8 };
-        updateViewMetrics();
-        rebuildGrid();
-        drawScene();
-        return;
-      }
-
-      const [roomsW, roomsH] = val.split('x').map(Number);
-      layoutConfig = { key: val, cols: roomsW * 4, rows: roomsH * 4 };
+  // --- Global Dropdown Handler for Mobile ---
+  window.changeLayout = function(val) {
+    if (val === 'none') {
+      roomLoaded = false;
+      canvasErrorMessage = "";
+      layoutConfig = { key: 'none', cols: 8, rows: 8 };
       updateViewMetrics();
-
-      placedItems = placedItems.filter(item => {
-        const { w, d } = getEffectiveFootprint(item.footprint, item.rotation);
-        return item.row + d <= layoutConfig.rows && item.col + w <= layoutConfig.cols;
-      });
-
-      if (selectedItemInstance && !placedItems.includes(selectedItemInstance)) {
-        selectedItemInstance = null;
-        updateSelectionUI();
-      }
-
       rebuildGrid();
-      loadRoomImage(val);
-    };
-  }
+      drawScene();
+      return;
+    }
+
+    const [roomsW, roomsH] = val.split('x').map(Number);
+    layoutConfig = { key: val, cols: roomsW * 4, rows: roomsH * 4 };
+    updateViewMetrics();
+
+    placedItems = placedItems.filter(item => {
+      const { w, d } = getEffectiveFootprint(item.footprint, item.rotation);
+      return item.row + d <= layoutConfig.rows && item.col + w <= layoutConfig.cols;
+    });
+
+    if (selectedItemInstance && !placedItems.includes(selectedItemInstance)) {
+      selectedItemInstance = null;
+      updateSelectionUI();
+    }
+
+    rebuildGrid();
+    loadRoomImage(val);
+  };
 
   const wallpaperSelect = document.getElementById('wallpaperSelect');
   if (wallpaperSelect) {
-    wallpaperSelect.addEventListener('change', (e) => {
-      loadWallpaperImage(e.target.value);
-    });
+    wallpaperSelect.addEventListener('change', (e) => loadWallpaperImage(e.target.value));
   }
 
   const flooringSelect = document.getElementById('flooringSelect');
   if (flooringSelect) {
-    flooringSelect.addEventListener('change', (e) => {
-      loadFlooringImage(e.target.value);
-    });
+    flooringSelect.addEventListener('change', (e) => loadFlooringImage(e.target.value));
   }
 
   const furnitureSelect = document.getElementById('furnitureSelect');
@@ -181,7 +175,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   const selectedActionsPanel = document.getElementById('selectedActionsPanel');
-  function updateSelectionUI() {
+  updateSelectionUI = function() {
     if (selectedActionsPanel) {
       selectedActionsPanel.classList.toggle('hidden', !selectedItemInstance);
     }
@@ -208,7 +202,7 @@ window.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  function getEffectiveFootprint(footprint, rotation) {
+  getEffectiveFootprint = function(footprint, rotation) {
     const isSwapped = rotation % 2 === 1;
     return {
       w: isSwapped ? footprint.d : footprint.w,
@@ -227,7 +221,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return false;
   }
 
-  // --- Mouse Interaction ---
+  // --- Mouse & Touch Interaction ---
   canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     const { r, c } = screenToGrid(e.clientX - rect.left, e.clientY - rect.top);
@@ -272,7 +266,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  function rebuildGrid() {
+  rebuildGrid = function() {
     grid = Array.from({ length: layoutConfig.rows }, () => Array(layoutConfig.cols).fill(null));
     placedItems.forEach(item => {
       const { w, d } = getEffectiveFootprint(item.footprint, item.rotation);
@@ -351,7 +345,7 @@ window.addEventListener('DOMContentLoaded', () => {
     );
   }
 
-  function drawScene() {
+  drawScene = function() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 1. Draw Room Background Base or Error Message
