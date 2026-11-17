@@ -68,9 +68,9 @@ let flooringLoaded = false;
 
 function loadRoomImage(layoutKey) {
   roomLoaded = false;
-  roomImg.src = `./Images/Rooms/${layoutKey}.png`;
+  roomImg.src = `./Images/Rooms/${layoutKey} Daycare.png`;
   roomImg.onload = () => { roomLoaded = true; drawScene(); };
-  roomImg.onerror = () => { console.error(`Missing room asset: Images/Rooms/${layoutKey}.png`); drawScene(); };
+  roomImg.onerror = () => { console.error(`Missing room asset: Images/Rooms/${layoutKey} Daycare.png`); drawScene(); };
 }
 
 function loadWallpaperImage(wallpaperKey) {
