@@ -21,14 +21,16 @@
       <div class="control-group">
         <label for="layoutSelect">Daycare Layout</label>
         <select id="layoutSelect">
-          <option value="none" selected>None (Blank Canvas)</option>
-          <option value="1x1">1x1 Room (4x4 tiles)</option>
-          <option value="2x1">2x1 Rooms (8x4 tiles)</option>
-          <option value="1x2">1x2 Rooms (4x8 tiles)</option>
-          <option value="2x2">2x2 Rooms (8x8 tiles)</option>
-          <option value="2x3">2x3 Rooms (8x12 tiles)</option>
-          <option value="3x2">3x2 Rooms (12x8 tiles)</option>
-          <option value="3x3">3x3 Rooms (12x12 tiles)</option>
+        <select id="layoutSelect" onchange="changeLayout(this.value)">
+          <option value="none">Select a layout...</option>
+          <option value="1x1">1x1 Room</option>
+          <option value="1x2">1x2 Room</option>
+          <option value="2x1">2x1 Room</option>
+          <option value="2x2">2x2 Room</option>
+          <option value="2x3">2x3 Room</option>
+          <option value="3x2">3x2 Room</option>
+          <option value="3x3">3x3 Room</option>
+          <!-- Add your other room options here -->
         </select>
       </div>
 
