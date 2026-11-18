@@ -99,10 +99,15 @@ function updateRoomSelectorUI() {
 function initDefaultLayout() {
     const layoutSelect = document.getElementById('layoutSelect') || document.getElementById('layout-select');
     
-    // Fallback layouts list in case layouts.js fails to load on mobile
+    // Complete embedded list of all 7 layouts for reliable mobile loading
     let layoutsList = (typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) ? masterLayouts : [
-        { name: "3x3 Room Layout (4x4 slots each)", cols: 12, rows: 12, baseImage: "Images/Layouts/3x3.png" },
-        { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Layouts/1x1.png" }
+        { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Rooms/1x1 Daycare.png" },
+        { name: "1x2 Room Layout", cols: 4, rows: 8, baseImage: "Images/Rooms/1x2 Daycare.png" },
+        { name: "2x1 Room Layout", cols: 8, rows: 4, baseImage: "Images/Rooms/2x1 Daycare.png" },
+        { name: "2x2 Room Layout", cols: 8, rows: 8, baseImage: "Images/Rooms/2x2 Daycare.png" },
+        { name: "2x3 Room Layout", cols: 8, rows: 12, baseImage: "Images/Rooms/2x3 Daycare.png" },
+        { name: "3x2 Room Layout", cols: 12, rows: 8, baseImage: "Images/Rooms/3x2 Daycare.png" },
+        { name: "3x3 Room Layout", cols: 12, rows: 12, baseImage: "Images/Rooms/3x3 Daycare.png" }
     ];
 
     if (layoutSelect) {
@@ -114,7 +119,6 @@ function initDefaultLayout() {
             layoutSelect.appendChild(option);
         });
         
-        // Use addEventListener for reliable mobile event handling
         layoutSelect.addEventListener('change', (e) => {
             switchLayout(e.target.value);
         });
@@ -136,8 +140,13 @@ function initDefaultLayout() {
 // --- 4. SWITCH LAYOUT DYNAMICALLY ---
 function switchLayout(index) {
     let layoutsList = (typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) ? masterLayouts : [
-        { name: "3x3 Room Layout (4x4 slots each)", cols: 12, rows: 12, baseImage: "Images/Layouts/3x3.png" },
-        { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Layouts/1x1.png" }
+        { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Rooms/1x1 Daycare.png" },
+        { name: "1x2 Room Layout", cols: 4, rows: 8, baseImage: "Images/Rooms/1x2 Daycare.png" },
+        { name: "2x1 Room Layout", cols: 8, rows: 4, baseImage: "Images/Rooms/2x1 Daycare.png" },
+        { name: "2x2 Room Layout", cols: 8, rows: 8, baseImage: "Images/Rooms/2x2 Daycare.png" },
+        { name: "2x3 Room Layout", cols: 8, rows: 12, baseImage: "Images/Rooms/2x3 Daycare.png" },
+        { name: "3x2 Room Layout", cols: 12, rows: 8, baseImage: "Images/Rooms/3x2 Daycare.png" },
+        { name: "3x3 Room Layout", cols: 12, rows: 12, baseImage: "Images/Rooms/3x Daycare3.png" }
     ];
 
     if (!layoutsList[index]) return;
@@ -148,12 +157,13 @@ function switchLayout(index) {
     }
     
     activeRoomId = 1;
-    daycareState.furniture = {}; // Clear furniture on switch
+    daycareState.furniture = {}; 
 
     updateRoomSelectorUI();
     buildDynamicFurnitureSlots();
     renderDaycareStage();
 }
+
 
 
 // --- 5. ROTATION BOUNDARY VALIDATION ---
