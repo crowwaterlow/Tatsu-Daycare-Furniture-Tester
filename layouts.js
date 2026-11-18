@@ -1,9 +1,9 @@
 const masterLayouts = [
     {
         name: "3x3 Room",
-        cols: 3,
-        rows: 3,
-        baseImage: "Images/Layouts/3x3.png", 
+        cols: 12,
+        rows: 12,
+        baseImage: "Images/Rooms/3x3 Daycare.png", 
         getTileCoordinates: (c, r) => ({ 
             x: (c - r) * 32, 
             y: (c + r) * 16, 
@@ -17,9 +17,9 @@ const masterLayouts = [
     },
     {
         name: "2x2 Room",
-        cols: 2,
-        rows: 2,
-        baseImage: "Images/Layouts/2x2.png", 
+        cols: 8,
+        rows: 8,
+        baseImage: "Images/Rooms/2x2 Daycare.png", 
         getTileCoordinates: (c, r) => ({ 
             x: (c - r) * 32, 
             y: (c + r) * 16, 
