@@ -1,6 +1,6 @@
 // Global State for Daycare
 let currentLayout = null;
-let activeMainCategory = 'furnishings'; // 'furnishings' or 'furniture'
+let currentZoom = 1.0; // Default scale multiplier
 
 const daycareState = {
     furnishings: {
@@ -11,9 +11,6 @@ const daycareState = {
 };
 
 // DOM Elements
-const catButtons = document.querySelectorAll('.cat-btn');
-const workspaceFurnishings = document.getElementById('workspace-furnishings');
-const workspaceFurniture = document.getElementById('workspace-furniture');
 const roomLayer = document.getElementById('room-layer');
 const furnitureStageLayers = document.getElementById('furniture-stage-layers');
 
@@ -39,7 +36,24 @@ function hideAllDropdowns() {
     document.querySelectorAll('.custom-dropdown').forEach(d => d.style.display = 'none');
 }
 
-// --- 1. INITIALIZE DEFAULT LAYOUT ---
+// --- 1. ZOOM CONTROLS ---
+function adjustZoom(amount) {
+    currentZoom = Math.max(0.5, Math.min(2.0, currentZoom + amount)); // Limits scale between 50% and 200%
+    applyZoom();
+}
+
+function resetZoom() {
+    currentZoom = 1.0;
+    applyZoom();
+}
+
+function applyZoom() {
+    const scaleValue = `scale(${currentZoom})`;
+    roomLayer.style.transform = scaleValue;
+    furnitureStageLayers.style.transform = scaleValue;
+}
+
+// --- 2. INITIALIZE DEFAULT LAYOUT ---
 function initDefaultLayout() {
     if (typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) {
         currentLayout = masterLayouts[0]; 
@@ -61,51 +75,27 @@ function initDefaultLayout() {
     renderDaycareStage();
 }
 
-// --- 2. MAIN CATEGORY TABS ---
-catButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-        catButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        activeMainCategory = btn.getAttribute('data-maincat');
-        
-        if (activeMainCategory === 'furnishings') {
-            workspaceFurnishings.style.display = 'block';
-            workspaceFurniture.style.display = 'none';
-        } else {
-            workspaceFurnishings.style.display = 'none';
-            workspaceFurniture.style.display = 'block';
-        }
-        hideAllDropdowns();
-    });
-});
-
 // --- 3. ROTATION BOUNDARY VALIDATION ---
 function canRotateSafely(col, row, itemData, rotation) {
-    // 1-slot items or wall items don't cross multi-tile room sub-boundaries this way
     if (!itemData || !itemData.is2Slot) return true; 
 
-    // Determine which secondary tile the 2-slot item will occupy based on rotation
     let affectedTiles = [`${col},${row}`];
     
-    if (rotation === 0) affectedTiles.push(`${col + 1},${row}`);       // Extends right
-    else if (rotation === 1) affectedTiles.push(`${col},${row + 1}`);  // Extends down
-    else if (rotation === 2) affectedTiles.push(`${col - 1},${row}`);  // Extends left
-    else if (rotation === 3) affectedTiles.push(`${col},${row - 1}`);  // Extends up
+    if (rotation === 0) affectedTiles.push(`${col + 1},${row}`);       
+    else if (rotation === 1) affectedTiles.push(`${col},${row + 1}`);  
+    else if (rotation === 2) affectedTiles.push(`${col - 1},${row}`);  
+    else if (rotation === 3) affectedTiles.push(`${col},${row - 1}`);  
 
-    // Calculate 4x4 room sub-boundaries (assuming each sub-room is 4x4 grid spaces)
     const roomMinCol = Math.floor(col / 4) * 4;
     const roomMaxCol = roomMinCol + 3;
     const roomMinRow = Math.floor(row / 4) * 4;
     const roomMaxRow = roomMinRow + 3;
 
-    // Check every tile the rotated item intends to cover
     for (let tileKey of affectedTiles) {
         const [c, r] = tileKey.split(',').map(Number);
-        
-        // Ensure it stays inside the global grid and doesn't leak out of its 4x4 room
         if (c < 0 || c >= currentLayout.cols || r < 0 || r >= currentLayout.rows) return false;
         if (c < roomMinCol || c > roomMaxCol || r < roomMinRow || r > roomMaxRow) {
-            return false; // Crosses into a neighboring room or over a partition!
+            return false; 
         }
     }
     return true;
@@ -118,7 +108,6 @@ function buildDynamicFurnitureSlots() {
 
     if (!currentLayout) return;
 
-    // Generate grid slot inputs based on columns and rows
     for (let r = 0; r < currentLayout.rows; r++) {
         for (let c = 0; c < currentLayout.cols; c++) {
             const tileKey = `${c},${r}`;
@@ -126,7 +115,6 @@ function buildDynamicFurnitureSlots() {
         }
     }
 
-    // Wall Furniture / Décor Section
     const wallHeader = document.createElement('div');
     wallHeader.className = 'swap-label';
     wallHeader.textContent = 'WALL FURNITURE / DÉCOR';
@@ -154,7 +142,6 @@ function createFurnitureSlotRow(key, labelText, type) {
     input.value = daycareState.furniture[key]?.name || '';
     input.autocomplete = 'off';
 
-    // Rotation Control Group (Counter-Clockwise & Clockwise buttons)
     const rotGroup = document.createElement('div');
     rotGroup.className = 'rotation-group';
     rotGroup.style.display = (daycareState.furniture[key]?.name) ? 'flex' : 'none';
@@ -177,7 +164,6 @@ function createFurnitureSlotRow(key, labelText, type) {
         const maxRot = (type === 'floor') ? 4 : 2;
         const [col, row] = key.includes(',') ? key.split(',').map(Number) : [0, 0];
 
-        // Automatically cycle backwards to find the next safe orientation
         let testRot = itemData.rotation;
         for (let i = 1; i <= maxRot; i++) {
             testRot = (testRot - 1 + maxRot) % maxRot;
@@ -204,7 +190,6 @@ function createFurnitureSlotRow(key, labelText, type) {
         const maxRot = (type === 'floor') ? 4 : 2;
         const [col, row] = key.includes(',') ? key.split(',').map(Number) : [0, 0];
 
-        // Automatically cycle forwards to find the next safe orientation
         let testRot = itemData.rotation;
         for (let i = 1; i <= maxRot; i++) {
             testRot = (testRot + 1) % maxRot;
@@ -370,12 +355,10 @@ function processCombinedWallpaper(imageSrc, callback) {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
 
-        // Extract LEFT half
         ctx.clearRect(0, 0, halfWidth, height);
         ctx.drawImage(img, 0, 0, halfWidth, height, 0, 0, halfWidth, height);
         const leftHalf = canvas.toDataURL('image/png');
 
-        // Extract RIGHT half
         ctx.clearRect(0, 0, halfWidth, height);
         ctx.drawImage(img, halfWidth, 0, halfWidth, height, 0, 0, halfWidth, height);
         const rightHalf = canvas.toDataURL('image/png');
@@ -388,7 +371,6 @@ function renderDaycareStage() {
     furnitureStageLayers.innerHTML = '';
     if (!currentLayout) return;
 
-    // 1. Render Wallpaper Segments
     const selectedWallpaperName = daycareState.furnishings.wall['combined'];
     if (selectedWallpaperName) {
         const wallpaperData = masterFurnishings.wall.find(i => i.name === selectedWallpaperName);
@@ -413,7 +395,6 @@ function renderDaycareStage() {
         }
     }
 
-    // 2. Render Placed Furniture
     Object.keys(daycareState.furniture).forEach(key => {
         const placedItem = daycareState.furniture[key];
         if (!placedItem || !placedItem.name) return;
@@ -443,6 +424,9 @@ function renderDaycareStage() {
 
         furnitureStageLayers.appendChild(img);
     });
+
+    // Re-apply current zoom level to newly rendered elements
+    applyZoom();
 }
 
 // Initial Run
