@@ -99,26 +99,28 @@ function updateRoomSelectorUI() {
 function initDefaultLayout() {
     const layoutSelect = document.getElementById('layoutSelect') || document.getElementById('layout-select');
     
-    if (layoutSelect && typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) {
+    // Fallback layouts list in case layouts.js fails to load on mobile
+    let layoutsList = (typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) ? masterLayouts : [
+        { name: "3x3 Room Layout (4x4 slots each)", cols: 12, rows: 12, baseImage: "Images/Layouts/3x3.png" },
+        { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Layouts/1x1.png" }
+    ];
+
+    if (layoutSelect) {
         layoutSelect.innerHTML = '';
-        masterLayouts.forEach((layout, index) => {
+        layoutsList.forEach((layout, index) => {
             const option = document.createElement('option');
             option.value = index;
             option.textContent = layout.name;
             layoutSelect.appendChild(option);
         });
         
-        // Ensure event listener is properly attached
-        layoutSelect.onchange = (e) => {
+        // Use addEventListener for reliable mobile event handling
+        layoutSelect.addEventListener('change', (e) => {
             switchLayout(e.target.value);
-        };
+        });
     }
 
-    if (typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) {
-        currentLayout = masterLayouts[0]; 
-    } else {
-        console.error("masterLayouts is not defined! Check if layouts.js is loaded correctly.");
-    }
+    currentLayout = layoutsList[0]; 
 
     if (roomLayer && currentLayout) {
         roomLayer.src = currentLayout.baseImage;
@@ -131,23 +133,28 @@ function initDefaultLayout() {
     renderDaycareStage();
 }
 
-
 // --- 4. SWITCH LAYOUT DYNAMICALLY ---
 function switchLayout(index) {
-    if (!masterLayouts || !masterLayouts[index]) return;
+    let layoutsList = (typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) ? masterLayouts : [
+        { name: "3x3 Room Layout (4x4 slots each)", cols: 12, rows: 12, baseImage: "Images/Layouts/3x3.png" },
+        { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Layouts/1x1.png" }
+    ];
+
+    if (!layoutsList[index]) return;
     
-    currentLayout = masterLayouts[index];
+    currentLayout = layoutsList[index];
     if (roomLayer) {
         roomLayer.src = currentLayout.baseImage;
     }
     
     activeRoomId = 1;
-    daycareState.furniture = {}; // Clear furniture on layout switch to prevent out-of-bound errors
+    daycareState.furniture = {}; // Clear furniture on switch
 
     updateRoomSelectorUI();
     buildDynamicFurnitureSlots();
     renderDaycareStage();
 }
+
 
 // --- 5. ROTATION BOUNDARY VALIDATION ---
 function canRotateSafely(col, row, itemData, rotation) {
