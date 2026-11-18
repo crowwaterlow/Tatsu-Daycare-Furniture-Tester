@@ -53,8 +53,19 @@ function applyZoom() {
     furnitureStageLayers.style.transform = scaleValue;
 }
 
-// --- 2. INITIALIZE DEFAULT LAYOUT ---
+// --- 2. INITIALIZE DEFAULT LAYOUT & DROPDOWN ---
 function initDefaultLayout() {
+    const layoutSelect = document.getElementById('layout-select');
+    if (layoutSelect && typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) {
+        layoutSelect.innerHTML = '';
+        masterLayouts.forEach((layout, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = layout.name;
+            layoutSelect.appendChild(option);
+        });
+    }
+
     if (typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) {
         currentLayout = masterLayouts[0]; 
     } else {
@@ -75,7 +86,21 @@ function initDefaultLayout() {
     renderDaycareStage();
 }
 
-// --- 3. ROTATION BOUNDARY VALIDATION ---
+// --- 3. SWITCH LAYOUT DYNAMICALLY ---
+function switchLayout(index) {
+    if (!masterLayouts || !masterLayouts[index]) return;
+    
+    currentLayout = masterLayouts[index];
+    roomLayer.src = currentLayout.baseImage;
+    
+    // Clear previously placed furniture to prevent out-of-bound grid issues on new layouts
+    daycareState.furniture = {};
+
+    buildDynamicFurnitureSlots();
+    renderDaycareStage();
+}
+
+// --- 4. ROTATION BOUNDARY VALIDATION ---
 function canRotateSafely(col, row, itemData, rotation) {
     if (!itemData || !itemData.is2Slot) return true; 
 
@@ -101,7 +126,7 @@ function canRotateSafely(col, row, itemData, rotation) {
     return true;
 }
 
-// --- 4. DYNAMIC FURNITURE SLOTS & ROTATION CONTROLS ---
+// --- 5. DYNAMIC FURNITURE SLOTS & ROTATION CONTROLS ---
 function buildDynamicFurnitureSlots() {
     const container = document.getElementById('dynamic-furniture-slots');
     container.innerHTML = '';
@@ -255,7 +280,7 @@ function createFurnitureSlotRow(key, labelText, type) {
     return rowDiv;
 }
 
-// --- 5. DROPDOWNS ---
+// --- 6. DROPDOWNS ---
 function renderFurnitureDropdown(key, type, filter = '') {
     const dropdown = document.getElementById(`dropdown-${key}`);
     dropdown.innerHTML = '';
@@ -334,12 +359,12 @@ function renderFurnishingDropdown(type, filter = '') {
 }
 
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('.layer-row')) {
+    if (!e.target.closest('.layer-row') && !e.target.closest('#workspace-layout')) {
         hideAllDropdowns();
     }
 });
 
-// --- 6. WALLPAPER SPLITTER & STAGE RENDERER ---
+// --- 7. WALLPAPER SPLITTER & STAGE RENDERER ---
 function processCombinedWallpaper(imageSrc, callback) {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -425,7 +450,6 @@ function renderDaycareStage() {
         furnitureStageLayers.appendChild(img);
     });
 
-    // Re-apply current zoom level to newly rendered elements
     applyZoom();
 }
 
