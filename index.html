@@ -1,84 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daycare Furniture Tester</title>
-  <link rel="stylesheet" href="style.css?v=125">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Isometric Daycare Designer</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="app-container">
+        <!-- Navigation Header -->
+        <header class="top-nav">
+            <a href="https://tatsu.gg" target="_blank" rel="noopener noreferrer" class="nav-link">Tatsu</a>
+            <a href="https://discord.gg/tatsu" target="_blank" rel="noopener noreferrer" class="nav-link">Server</a>
+            <a href="https://tatsu.fandom.com/wiki/Tatsu_Wiki" target="_blank" rel="noopener noreferrer" class="nav-link">Wiki</a>
+        </header>
 
-  <h1>Daycare Furniture Tester</h1>
-  <p class="subtitle">Isometric Room &amp; Furniture Asset Previewer</p>
+        <main class="content">
+            <!-- 1. Daycare Stage (Isometric Viewport) -->
+            <div class="stage" id="stage">
+                <!-- Base Room Background -->
+                <img id="room-layer" src="" alt="Daycare Room Base" style="display: none;">
+                
+                <!-- Dynamic Furniture & Wallpaper Layers Rendered via JavaScript -->
+                <div id="furniture-stage-layers"></div>
+            </div>
 
-  <div class="main-container">
-    
-    <!-- 1. Canvas Stage (Top) -->
-    <div class="canvas-wrapper">
-      <canvas id="testerCanvas" width="512" height="640"></canvas>
+            <!-- 2. Main Category Tabs -->
+            <section class="section">
+                <h2>Customize Daycare</h2>
+                
+                <div class="category-icon-grid">
+                    <button class="cat-btn active" data-maincat="furnishings">
+                        Furnishings
+                    </button>
+                    <button class="cat-btn" data-maincat="furniture">
+                        Furnitures
+                    </button>
+                </div>
+
+                <!-- Furnishings Workspace (Wallpaper & Flooring) -->
+                <div id="workspace-furnishings" class="workspace-card">
+                    <div class="workspace-header">
+                        <span>ROOM FURNISHINGS</span>
+                    </div>
+                    
+                    <!-- Furnishing Slots Container -->
+                    <div id="furnishings-slots-container">
+                        <div class="select-row layer-row search-container">
+                            <span class="layer-badge">Floor</span>
+                            <input type="text" class="furnishing-search" id="slot-floor" placeholder="Search flooring..." autocomplete="off" oninput="onSearchInput(this, 'floor-clear-btn')">
+                            <button type="button" id="floor-clear-btn" class="clear-btn" onclick="clearSearch('slot-floor', 'floor-clear-btn')">&times;</button>
+                            <div class="custom-dropdown" id="dropdown-floor" style="display: none;"></div>
+                        </div>
+
+                        <div class="select-row layer-row search-container">
+                            <span class="layer-badge">Wallpaper</span>
+                            <input type="text" class="furnishing-search" id="slot-wall" placeholder="Search combined wallpaper..." autocomplete="off" oninput="onSearchInput(this, 'wall-clear-btn')">
+                            <button type="button" id="wall-clear-btn" class="clear-btn" onclick="clearSearch('slot-wall', 'wall-clear-btn')">&times;</button>
+                            <div class="custom-dropdown" id="dropdown-wall" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Furniture Workspace (Dynamic Slots based on Layout Size & Rotations) -->
+                <div id="workspace-furniture" class="workspace-card" style="display: none;">
+                    <div class="workspace-header">
+                        <span id="furniture-category-title">PLACEMENT SLOTS</span>
+                    </div>
+                    <!-- Dynamically generated coordinate/slot inputs & rotation controls appear here -->
+                    <div id="dynamic-furniture-slots">
+                        <!-- Populated automatically by script.js -->
+                    </div>
+                </div>
+            </section>
+
+            <footer class="footer-note">
+                Isometric Daycare Designer &bull; Built with custom layout routing
+            </footer>
+        </main>
     </div>
 
-    <!-- 2. Controls Panel (Below Canvas) -->
-    <div class="sidebar">
-      
-      <div class="control-group">
-  <label class="block text-xs font-semibold text-gray-400 mb-1">DAYCARE LAYOUT</label>
-  <div class="select-row layer-row">
-    <img src="" class="row-icon" alt="Room Icon" id="room-icon" style="display: none;">
-    <select id="layoutSelect" onchange="changeLayout(this.value)">
-      <option value="none">Select a layout...</option>
-      <option value="1x1">1x1 Room</option>
-      <option value="1x2">1x2 Room</option>
-      <option value="2x1">2x1 Room</option>
-      <option value="2x2">2x2 Room</option>
-      <option value="2x3">2x3 Room</option>
-      <option value="3x2">3x2 Room</option>
-      <option value="3x3">3x3 Room</option>
-    </select>
-  </div>
-</div>
-
-
-      <div class="control-group">
-        <label for="wallpaperSelect">Wallpaper</label>
-        <select id="wallpaperSelect">
-          <option value="none">None (No Wallpaper)</option>
-        </select>
-      </div>
-
-      <div class="control-group">
-        <label for="flooringSelect">Flooring</label>
-        <select id="flooringSelect">
-          <option value="none">None (No Flooring)</option>
-        </select>
-      </div>
-
-      <div class="control-group">
-        <label for="furnitureSelect">Select Furniture</label>
-        <select id="furnitureSelect">
-          <option value="none">None (Select Item)</option>
-          <option value="chair">Office Chair</option>
-          <option value="table">Large Table</option>
-        </select>
-      </div>
-
-      <!-- Selected Item Actions -->
-      <div id="selectedActionsPanel" class="hidden">
-        <div class="control-group">
-          <label>Selected Furniture</label>
-          <div class="button-row">
-            <button id="rotateCCWBtn" class="secondary">↺ Rotate</button>
-            <button id="rotateCWBtn" class="secondary">↻ Rotate</button>
-            <button id="deleteSelectedBtn" class="danger">Delete</button>
-          </div>
-        </div>
-      </div>
-
-      <button id="clearBtn" class="danger">Clear All Furniture</button>
-
-    </div>
-  </div>
-
-  <script src="script.js?v=125" defer></script>
+    <!-- Data & Script files -->
+    <script src="layouts.js"></script>
+    <script src="furnishings.js"></script>
+    <script src="furniture.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
