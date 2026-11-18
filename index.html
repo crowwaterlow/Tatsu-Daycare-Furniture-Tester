@@ -16,13 +16,22 @@
         </header>
 
         <main class="content">
-            <!-- 1. Daycare Stage (Isometric Viewport) -->
-            <div class="stage" id="stage">
-                <!-- Base Room Background -->
-                <img id="room-layer" src="" alt="Daycare Room Base" style="display: none;">
-                
-                <!-- Dynamic Furniture & Wallpaper Layers Rendered via JavaScript -->
-                <div id="furniture-stage-layers"></div>
+            <!-- 1. Daycare Stage Wrapper with Zoom Controls -->
+            <div class="stage-wrapper">
+                <!-- Zoom Toolbar -->
+                <div class="zoom-controls">
+                    <button type="button" class="zoom-btn" onclick="adjustZoom(0.1)" title="Zoom In">+</button>
+                    <button type="button" class="zoom-btn" onclick="resetZoom()" title="Reset Zoom">1:1</button>
+                    <button type="button" class="zoom-btn" onclick="adjustZoom(-0.1)" title="Zoom Out">-</button>
+                </div>
+
+                <div class="stage" id="stage">
+                    <!-- Base Room Background -->
+                    <img id="room-layer" src="" alt="Daycare Room Base" style="display: none;">
+                    
+                    <!-- Dynamic Furniture & Wallpaper Layers Rendered via JavaScript -->
+                    <div id="furniture-stage-layers"></div>
+                </div>
             </div>
 
             <!-- 2. Workspaces Section (Both Visible by Default) -->
@@ -64,7 +73,7 @@
             </section>
 
             <footer class="footer-note">
-                Isometric Daycare Designer &bull; Built with custom layout routing
+                Isometric Daycare Designer &bull; Built with custom layout routing & zoom controls
             </footer>
         </main>
     </div>
