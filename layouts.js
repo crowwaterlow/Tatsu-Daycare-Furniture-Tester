@@ -1,6 +1,6 @@
 const masterLayouts = [
     {
-        name: "1x1 Daycare Room Layout",
+        name: "1x1 Daycare",
         cols: 4,   
         rows: 4,   
         baseImage: "Images/Rooms/1x1 Daycare.png",[span_0](start_span)[span_0](end_span)
@@ -24,7 +24,7 @@ const masterLayouts = [
         }
     },
     {
-        name: "1x2 Daycare Room Layout",
+        name: "1x2 Daycare",
         cols: 4,   
         rows: 8,   
         baseImage: "Images/Rooms/1x2 Daycare.png",[span_4](start_span)[span_4](end_span)
@@ -52,7 +52,7 @@ const masterLayouts = [
         }
     },
     {
-        name: "2x1 Daycare Room Layout",
+        name: "2x1 Daycare",
         cols: 8,[span_5](start_span)[span_5](end_span)   
         rows: 4,[span_6](start_span)[span_6](end_span)  
         baseImage: "Images/Rooms/2x1 Daycare.png",[span_7](start_span)[span_7](end_span)
@@ -80,7 +80,7 @@ const masterLayouts = [
         }
     },
     {
-        name: "2x2 Daycare Room Layout",
+        name: "2x2 Daycare",
         cols: 8,[span_8](start_span)[span_8](end_span)   
         rows: 8,[span_9](start_span)[span_9](end_span)  
         baseImage: "Images/Rooms/2x2 Daycare.png",[span_10](start_span)[span_10](end_span)
@@ -115,7 +115,7 @@ const masterLayouts = [
         }
     },
     {
-        name: "2x3 Daycare Room Layout",
+        name: "2x3 Daycare",
         cols: 8,[span_11](start_span)[span_11](end_span)   
         rows: 12,[span_12](start_span)[span_12](end_span) 
         baseImage: "Images/Rooms/2x3 Daycare.png",[span_13](start_span)[span_13](end_span)
@@ -150,7 +150,7 @@ const masterLayouts = [
         }
     },
     {
-        name: "3x2 Daycare Room Layout",
+        name: "3x2 Daycare",
         cols: 12,[span_14](start_span)[span_14](end_span)  
         rows: 8,[span_15](start_span)[span_15](end_span)   
         baseImage: "Images/Rooms/3x2 Daycare.png",[span_16](start_span)[span_16](end_span)
@@ -185,7 +185,7 @@ const masterLayouts = [
         }
     },
     {
-        name: "3x3 Daycare Room Layout",
+        name: "3x3 Daycare",
         cols: 12,
         rows: 12,
         baseImage: "Images/Rooms/3x3 Daycare.png",[span_17](start_span)[span_17](end_span)
