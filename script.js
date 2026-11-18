@@ -98,6 +98,7 @@ function updateRoomSelectorUI() {
 // --- 3. INITIALIZE DEFAULT LAYOUT & DROPDOWN ---
 function initDefaultLayout() {
     const layoutSelect = document.getElementById('layoutSelect') || document.getElementById('layout-select');
+    
     if (layoutSelect && typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) {
         layoutSelect.innerHTML = '';
         masterLayouts.forEach((layout, index) => {
@@ -106,6 +107,8 @@ function initDefaultLayout() {
             option.textContent = layout.name;
             layoutSelect.appendChild(option);
         });
+        
+        // Ensure event listener is properly attached
         layoutSelect.onchange = (e) => {
             switchLayout(e.target.value);
         };
@@ -114,18 +117,10 @@ function initDefaultLayout() {
     if (typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) {
         currentLayout = masterLayouts[0]; 
     } else {
-        currentLayout = {
-            name: "1x1 Daycare Room Layout",
-            cols: 4,
-            rows: 4,
-            baseImage: "Images/Layouts/1x1.png", 
-            getTileCoordinates: (c, r) => ({ x: (c - r) * 32, y: (c + r) * 16, zIndex: 10 + c + r }),
-            getWallCoordinates: (side) => ({ x: side === 'left-wall' ? -60 : 60, y: -40, zIndex: 5 }),
-            getCustomSlotLabel: (c, r) => `Room 1 - Slot`
-        };
+        console.error("masterLayouts is not defined! Check if layouts.js is loaded correctly.");
     }
 
-    if (roomLayer) {
+    if (roomLayer && currentLayout) {
         roomLayer.src = currentLayout.baseImage;
         roomLayer.style.display = 'block';
     }
@@ -135,6 +130,7 @@ function initDefaultLayout() {
     buildDynamicFurnitureSlots();
     renderDaycareStage();
 }
+
 
 // --- 4. SWITCH LAYOUT DYNAMICALLY ---
 function switchLayout(index) {
