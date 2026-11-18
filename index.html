@@ -25,26 +25,16 @@
                 <div id="furniture-stage-layers"></div>
             </div>
 
-            <!-- 2. Main Category Tabs -->
+            <!-- 2. Workspaces Section (Both Visible by Default) -->
             <section class="section">
                 <h2>Customize Daycare</h2>
-                
-                <div class="category-icon-grid">
-                    <button class="cat-btn active" data-maincat="furnishings">
-                        Furnishings
-                    </button>
-                    <button class="cat-btn" data-maincat="furniture">
-                        Furnitures
-                    </button>
-                </div>
 
-                <!-- Furnishings Workspace (Wallpaper & Flooring) -->
+                <!-- Room Furnishings Workspace (Floor & Wallpaper) -->
                 <div id="workspace-furnishings" class="workspace-card">
                     <div class="workspace-header">
                         <span>ROOM FURNISHINGS</span>
                     </div>
                     
-                    <!-- Furnishing Slots Container -->
                     <div id="furnishings-slots-container">
                         <div class="select-row layer-row search-container">
                             <span class="layer-badge">Floor</span>
@@ -62,12 +52,11 @@
                     </div>
                 </div>
 
-                <!-- Furniture Workspace (Dynamic Slots based on Layout Size & Rotations) -->
-                <div id="workspace-furniture" class="workspace-card" style="display: none;">
+                <!-- Furniture Workspace (Dynamic Slots & Rotations) -->
+                <div id="workspace-furniture" class="workspace-card">
                     <div class="workspace-header">
-                        <span id="furniture-category-title">PLACEMENT SLOTS</span>
+                        <span>PLACEMENT SLOTS (FURNITURE)</span>
                     </div>
-                    <!-- Dynamically generated coordinate/slot inputs & rotation controls appear here -->
                     <div id="dynamic-furniture-slots">
                         <!-- Populated automatically by script.js -->
                     </div>
