@@ -45,9 +45,9 @@ function initDefaultLayout() {
         currentLayout = masterLayouts[0]; 
     } else {
         currentLayout = {
-            name: "3x3 Room",
-            cols: 3,
-            rows: 3,
+            name: "3x3 Room Layout (4x4 slots each)",
+            cols: 12,
+            rows: 12,
             baseImage: "Images/Layouts/3x3.png", 
             getTileCoordinates: (c, r) => ({ x: (c - r) * 32, y: (c + r) * 16, zIndex: 10 + c + r }),
             getWallCoordinates: (side) => ({ x: side === 'left-wall' ? -60 : 60, y: -40, zIndex: 5 })
@@ -79,7 +79,39 @@ catButtons.forEach(btn => {
     });
 });
 
-// --- 3. DYNAMIC FURNITURE SLOTS & ROTATION CONTROLS ---
+// --- 3. ROTATION BOUNDARY VALIDATION ---
+function canRotateSafely(col, row, itemData, rotation) {
+    // 1-slot items or wall items don't cross multi-tile room sub-boundaries this way
+    if (!itemData || !itemData.is2Slot) return true; 
+
+    // Determine which secondary tile the 2-slot item will occupy based on rotation
+    let affectedTiles = [`${col},${row}`];
+    
+    if (rotation === 0) affectedTiles.push(`${col + 1},${row}`);       // Extends right
+    else if (rotation === 1) affectedTiles.push(`${col},${row + 1}`);  // Extends down
+    else if (rotation === 2) affectedTiles.push(`${col - 1},${row}`);  // Extends left
+    else if (rotation === 3) affectedTiles.push(`${col},${row - 1}`);  // Extends up
+
+    // Calculate 4x4 room sub-boundaries (assuming each sub-room is 4x4 grid spaces)
+    const roomMinCol = Math.floor(col / 4) * 4;
+    const roomMaxCol = roomMinCol + 3;
+    const roomMinRow = Math.floor(row / 4) * 4;
+    const roomMaxRow = roomMinRow + 3;
+
+    // Check every tile the rotated item intends to cover
+    for (let tileKey of affectedTiles) {
+        const [c, r] = tileKey.split(',').map(Number);
+        
+        // Ensure it stays inside the global grid and doesn't leak out of its 4x4 room
+        if (c < 0 || c >= currentLayout.cols || r < 0 || r >= currentLayout.rows) return false;
+        if (c < roomMinCol || c > roomMaxCol || r < roomMinRow || r > roomMaxRow) {
+            return false; // Crosses into a neighboring room or over a partition!
+        }
+    }
+    return true;
+}
+
+// --- 4. DYNAMIC FURNITURE SLOTS & ROTATION CONTROLS ---
 function buildDynamicFurnitureSlots() {
     const container = document.getElementById('dynamic-furniture-slots');
     container.innerHTML = '';
@@ -139,8 +171,21 @@ function createFurnitureSlotRow(key, labelText, type) {
     rotCCW.onclick = () => {
         let itemData = daycareState.furniture[key];
         if (!itemData || !itemData.name) return;
+
+        const masterItem = masterFurniture.floorItems.find(i => i.name === itemData.name) ||
+                           masterFurniture.wallItems.find(i => i.name === itemData.name);
         const maxRot = (type === 'floor') ? 4 : 2;
-        itemData.rotation = (itemData.rotation - 1 + maxRot) % maxRot;
+        const [col, row] = key.includes(',') ? key.split(',').map(Number) : [0, 0];
+
+        // Automatically cycle backwards to find the next safe orientation
+        let testRot = itemData.rotation;
+        for (let i = 1; i <= maxRot; i++) {
+            testRot = (testRot - 1 + maxRot) % maxRot;
+            if (type === 'wall' || canRotateSafely(col, row, masterItem, testRot)) {
+                itemData.rotation = testRot;
+                break;
+            }
+        }
         renderDaycareStage();
     };
 
@@ -153,8 +198,21 @@ function createFurnitureSlotRow(key, labelText, type) {
     rotCW.onclick = () => {
         let itemData = daycareState.furniture[key];
         if (!itemData || !itemData.name) return;
+
+        const masterItem = masterFurniture.floorItems.find(i => i.name === itemData.name) ||
+                           masterFurniture.wallItems.find(i => i.name === itemData.name);
         const maxRot = (type === 'floor') ? 4 : 2;
-        itemData.rotation = (itemData.rotation + 1) % maxRot;
+        const [col, row] = key.includes(',') ? key.split(',').map(Number) : [0, 0];
+
+        // Automatically cycle forwards to find the next safe orientation
+        let testRot = itemData.rotation;
+        for (let i = 1; i <= maxRot; i++) {
+            testRot = (testRot + 1) % maxRot;
+            if (type === 'wall' || canRotateSafely(col, row, masterItem, testRot)) {
+                itemData.rotation = testRot;
+                break;
+            }
+        }
         renderDaycareStage();
     };
 
@@ -212,7 +270,7 @@ function createFurnitureSlotRow(key, labelText, type) {
     return rowDiv;
 }
 
-// --- 4. DROPDOWNS ---
+// --- 5. DROPDOWNS ---
 function renderFurnitureDropdown(key, type, filter = '') {
     const dropdown = document.getElementById(`dropdown-${key}`);
     dropdown.innerHTML = '';
@@ -233,7 +291,7 @@ function renderFurnitureDropdown(key, type, filter = '') {
                 document.querySelector(`input[data-key="${key}"]`).value = itemData.name;
                 daycareState.furniture[key] = { name: itemData.name, rotation: 0 };
                 
-                const row = document.querySelector(`input[data-key="${key}" ]`).parentNode;
+                const row = document.querySelector(`input[data-key="${key}"]`).parentNode;
                 row.querySelector('.rotation-group').style.display = 'flex';
                 row.querySelector('.clear-btn').style.display = 'flex';
 
@@ -296,7 +354,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// --- 5. WALLPAPER SPLITTER & STAGE RENDERER ---
+// --- 6. WALLPAPER SPLITTER & STAGE RENDERER ---
 function processCombinedWallpaper(imageSrc, callback) {
     const img = new Image();
     img.crossOrigin = "anonymous";
