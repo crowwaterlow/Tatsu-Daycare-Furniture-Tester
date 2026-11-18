@@ -9,28 +9,93 @@
 <body>
 
     <div class="app-container">
-        <!-- Sidebar Controls -->
-        <div class="sidebar">
-            <h2>Daycare Designer</h2>
-            
-            <!-- Layout Selector -->
-            <div class="control-group">
-                <label for="layoutSelect">Select Layout:</label>
-                <select id="layoutSelect">
-                    <!-- Options populated dynamically from layouts.js -->
-                </select>
-            </div>
+        <!-- Navigation Header -->
+        <header class="top-nav">
+            <a href="https://tatsu.gg" target="_blank" rel="noopener noreferrer" class="nav-link">Tatsu</a>
+            <a href="https://discord.gg/tatsu" target="_blank" rel="noopener noreferrer" class="nav-link">Server</a>
+            <a href="https://tatsu.fandom.com/wiki/Tatsu_Wiki" target="_blank" rel="noopener noreferrer" class="nav-link">Wiki</a>
+        </header>
 
-            <!-- Dynamic Room Selector Panel -->
-            <div class="room-selector-panel">
-                <h3>Select Room</h3>
-                <div id="roomButtonsGrid" class="room-button-grid"></div>
-            </div>
-        </div>
+        <div class="workspace-layout">
+            <!-- Sidebar Controls -->
+            <aside class="sidebar">
+                <h2>Daycare Designer</h2>
+                
+                <!-- Layout Selector -->
+                <div class="control-group">
+                    <label for="layoutSelect">Select Layout:</label>
+                    <select id="layoutSelect">
+                        <!-- Options populated dynamically from layouts.js -->
+                    </select>
+                </div>
 
-        <!-- Canvas Viewport -->
-        <div class="canvas-viewport">
-            <canvas id="daycareCanvas" width="800" height="600"></canvas>
+                <!-- Dynamic Room Selector Panel -->
+                <div class="room-selector-panel">
+                    <h3>Select Room</h3>
+                    <div id="roomButtonsGrid" class="room-button-grid"></div>
+                </div>
+
+                <!-- Customization Workspaces -->
+                <section class="section">
+                    <h2>Customize Daycare</h2>
+                    
+                    <!-- Room Furnishings Workspace (Floor & Wallpaper) -->
+                    <div id="workspace-furnishings" class="workspace-card">
+                        <div class="workspace-header">
+                            <span>ROOM FURNISHINGS</span>
+                        </div>
+                        
+                        <div id="furnishings-slots-container">
+                            <div class="select-row layer-row search-container">
+                                <span class="layer-badge">Floor</span>
+                                <input type="text" class="furnishing-search" id="slot-floor" placeholder="Search flooring..." autocomplete="off" oninput="onSearchInput(this, 'floor-clear-btn')">
+                                <button type="button" id="floor-clear-btn" class="clear-btn" onclick="clearSearch('slot-floor', 'floor-clear-btn')">&times;</button>
+                                <div class="custom-dropdown" id="dropdown-floor" style="display: none;"></div>
+                            </div>
+                            <div class="select-row layer-row search-container">
+                                <span class="layer-badge">Wallpaper</span>
+                                <input type="text" class="furnishing-search" id="slot-wall" placeholder="Search combined wallpaper..." autocomplete="off" oninput="onSearchInput(this, 'wall-clear-btn')">
+                                <button type="button" id="wall-clear-btn" class="clear-btn" onclick="clearSearch('slot-wall', 'wall-clear-btn')">&times;</button>
+                                <div class="custom-dropdown" id="dropdown-wall" style="display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Furniture Workspace (Dynamic Slots & Rotations) -->
+                    <div id="workspace-furniture" class="workspace-card">
+                        <div class="workspace-header">
+                            <span>PLACEMENT SLOTS (FURNITURE)</span>
+                        </div>
+                        <div id="dynamic-furniture-slots">
+                            <!-- Populated automatically by script.js -->
+                        </div>
+                    </div>
+                </section>
+            </aside>
+
+            <!-- Canvas / Stage Viewport -->
+            <main class="canvas-viewport">
+                <div class="stage-wrapper">
+                    <!-- Zoom Toolbar -->
+                    <div class="zoom-controls">
+                        <button type="button" class="zoom-btn" onclick="adjustZoom(0.1)" title="Zoom In">+</button>
+                        <button type="button" class="zoom-btn" onclick="resetZoom()" title="Reset Zoom">1:1</button>
+                        <button type="button" class="zoom-btn" onclick="adjustZoom(-0.1)" title="Zoom Out">-</button>
+                    </div>
+
+                    <div class="stage" id="stage">
+                        <!-- Base Room Background -->
+                        <img id="room-layer" src="" alt="Daycare Room Base" style="display: none;">
+                        
+                        <!-- Dynamic Furniture & Wallpaper Layers Rendered via JavaScript -->
+                        <div id="furniture-stage-layers"></div>
+                    </div>
+                </div>
+
+                <footer class="footer-note">
+                    Isometric Daycare Designer &bull; Built with layout switcher & zoom controls
+                </footer>
+            </main>
         </div>
     </div>
 
