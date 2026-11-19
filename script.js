@@ -3,6 +3,8 @@ let currentLayout = null;
 let currentZoom = 1.0; // Default scale multiplier
 let activeRoomId = 1;
 
+const WALL_SLOTS_PER_ROOM = 4; // 4 left (1-4) + 4 right (5-8) = 8 per room; 12 per wallpaper half on 3x3
+
 const daycareState = {
     furnishings: {
         floor: {},
@@ -82,6 +84,10 @@ function getTotalRoomsForCurrentLayout() {
     if (currentLayout.cols === 12 && currentLayout.rows === 8) return 6;  // 3x2
     if (currentLayout.cols === 12 && currentLayout.rows === 12) return 9; // 3x3
     return 1;
+}
+
+function getRoomsPerRow() {
+    return Math.max(1, Math.ceil((currentLayout?.cols || 4) / 4));
 }
 
 function updateRoomSelectorUI() {
@@ -193,13 +199,13 @@ function canRotateSafely(col, row, itemData, rotation) {
 function getRoomIdForTile(c, r) {
     if (currentLayout && typeof currentLayout.getCustomSlotLabel === 'function') {
         const label = currentLayout.getCustomSlotLabel(c, r);
-        const match = label.match(/Room\s+(\d+)/i);
+        const match = label && label.match(/Room\s+(\d+)/i);
         if (match) return parseInt(match[1], 10);
     }
 
     const roomCol = Math.floor(c / 4);
     const roomRow = Math.floor(r / 4);
-    const roomsPerRow = Math.max(1, Math.ceil((currentLayout?.cols || 4) / 4));
+    const roomsPerRow = getRoomsPerRow();
     return roomRow * roomsPerRow + roomCol + 1;
 }
 
@@ -219,11 +225,57 @@ function getTileCoordinatesSafe(c, r) {
     return { x: (c - r) * 32, y: (c + r) * 16, zIndex: 10 + c + r };
 }
 
-function getWallCoordinatesSafe(side) {
-    if (currentLayout && typeof currentLayout.getWallCoordinates === 'function') {
-        return currentLayout.getWallCoordinates(side);
+function parseWallSlotKey(key) {
+    // Supports "room2-left-wall-1", "left-wall-1", or legacy "left-wall"
+    const match = key.match(/^(?:room(\d+)-)?(left-wall|right-wall)(?:-(\d+))?$/i);
+    if (!match) {
+        return { roomId: activeRoomId, side: 'left-wall', slotIndex: 0 };
     }
-    return { x: side === 'left-wall' ? -60 : 60, y: -40, zIndex: 5 };
+    return {
+        roomId: match[1] ? parseInt(match[1], 10) : activeRoomId,
+        side: match[2].toLowerCase(),
+        slotIndex: match[3] ? parseInt(match[3], 10) : 0
+    };
+}
+
+function getWallSlotDisplayNumber(side, slotIndex) {
+    // Left wall: 1-4; Right wall: 5-8
+    return side === 'left-wall' ? slotIndex + 1 : WALL_SLOTS_PER_ROOM + slotIndex + 1;
+}
+
+function getWallCoordinatesSafe(key) {
+    const { roomId, side, slotIndex } = parseWallSlotKey(key);
+    const roomsPerRow = getRoomsPerRow();
+    const roomIndex = Math.max(0, roomId - 1);
+    const roomCol = roomIndex % roomsPerRow;
+    const roomRow = Math.floor(roomIndex / roomsPerRow);
+
+    if (currentLayout && typeof currentLayout.getWallCoordinates === 'function') {
+        const baseCoords = currentLayout.getWallCoordinates(side, slotIndex, roomId) || { x: 0, y: 0, zIndex: 5 };
+        if (side === 'left-wall') {
+            const roomOffset = roomRow * WALL_SLOTS_PER_ROOM + slotIndex;
+            return {
+                x: (baseCoords.x || -60) - roomOffset * 14,
+                y: (baseCoords.y || -40) + roomOffset * 10,
+                zIndex: baseCoords.zIndex || 5
+            };
+        } else {
+            const roomOffset = roomCol * WALL_SLOTS_PER_ROOM + slotIndex;
+            return {
+                x: (baseCoords.x || 60) + roomOffset * 14,
+                y: (baseCoords.y || -40) + roomOffset * 10,
+                zIndex: baseCoords.zIndex || 5
+            };
+        }
+    }
+
+    if (side === 'left-wall') {
+        const roomOffset = roomRow * WALL_SLOTS_PER_ROOM + slotIndex;
+        return { x: -60 - roomOffset * 14, y: -40 + roomOffset * 10, zIndex: 5 };
+    } else {
+        const roomOffset = roomCol * WALL_SLOTS_PER_ROOM + slotIndex;
+        return { x: 60 + roomOffset * 14, y: -40 + roomOffset * 10, zIndex: 5 };
+    }
 }
 
 // --- 6. DYNAMIC FURNITURE SLOTS & ROTATION CONTROLS ---
@@ -249,18 +301,26 @@ function buildDynamicFurnitureSlots() {
         }
     }
 
+    // 8 wall slots per room: Left = 1-4, Right = 5-8 (4 per wallpaper half -> 12 per half on 3x3)
     const wallHeader = document.createElement('div');
     wallHeader.className = 'swap-label';
-    wallHeader.textContent = `ROOM ${activeRoomId} - WALL FURNITURE / DÉCOR`;
+    wallHeader.textContent = `ROOM ${activeRoomId} - WALL FURNITURE (1–4 LEFT, 5–8 RIGHT)`;
     container.appendChild(wallHeader);
 
     ['left-wall', 'right-wall'].forEach(wallSide => {
-        const wallLabel = wallSide === 'left-wall' ? `Room ${activeRoomId} - Left Wall` : `Room ${activeRoomId} - Right Wall`;
-        container.appendChild(createFurnitureSlotRow(wallSide, wallLabel, 'wall'));
+        const sideTitle = wallSide === 'left-wall' ? 'Left Wall' : 'Right Wall';
+
+        for (let s = 0; s < WALL_SLOTS_PER_ROOM; s++) {
+            const slotKey = `room${activeRoomId}-${wallSide}-${s}`;
+            const slotNumber = getWallSlotDisplayNumber(wallSide, s);
+            const slotLabel = `${slotNumber}`;
+            const placeholderLabel = `Room ${activeRoomId} ${sideTitle} Slot ${slotNumber}`;
+            container.appendChild(createFurnitureSlotRow(slotKey, slotLabel, 'wall', placeholderLabel));
+        }
     });
 }
 
-function createFurnitureSlotRow(key, labelText, type) {
+function createFurnitureSlotRow(key, labelText, type, placeholderText = null) {
     const rowDiv = document.createElement('div');
     rowDiv.className = 'select-row layer-row search-container';
     rowDiv.style.marginBottom = '10px';
@@ -273,7 +333,7 @@ function createFurnitureSlotRow(key, labelText, type) {
     input.type = 'text';
     input.className = 'furniture-search';
     input.dataset.key = key;
-    input.placeholder = `Search item for ${labelText}...`;
+    input.placeholder = `Search item for ${placeholderText || labelText}...`;
     input.value = daycareState.furniture[key]?.name || '';
     input.autocomplete = 'off';
 
@@ -526,7 +586,7 @@ function renderDaycareStage() {
                 const leftWall = document.createElement('img');
                 leftWall.src = splitImages.left;
                 leftWall.className = 'layer-img';
-                let lCoords = getWallCoordinatesSafe('left-wall');
+                let lCoords = getWallCoordinatesSafe('left-wall-0');
                 leftWall.style.transform = `translate(calc(-50% + ${lCoords.x}px), calc(-50% + ${lCoords.y}px))`;
                 leftWall.style.zIndex = lCoords.zIndex || 5;
                 furnitureStageLayers.appendChild(leftWall);
@@ -534,7 +594,7 @@ function renderDaycareStage() {
                 const rightWall = document.createElement('img');
                 rightWall.src = splitImages.right;
                 rightWall.className = 'layer-img';
-                let rCoords = getWallCoordinatesSafe('right-wall');
+                let rCoords = getWallCoordinatesSafe('right-wall-0');
                 rightWall.style.transform = `translate(calc(-50% + ${rCoords.x}px), calc(-50% + ${rCoords.y}px))`;
                 rightWall.style.zIndex = rCoords.zIndex || 5;
                 furnitureStageLayers.appendChild(rightWall);
