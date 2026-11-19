@@ -241,7 +241,7 @@ function applyZoom() {
 
 // --- 2. ROOM SELECTOR UI & ROOM CLEAR ACTIONS ---
 function getTotalRoomsForCurrentLayout() {
-    if (!currentLayout) return 1;
+    if (!currentLayout) return 0;
     if (currentLayout.cols === 4 && currentLayout.rows === 4) return 1;   // 1x1
     if (currentLayout.cols === 4 && currentLayout.rows === 8) return 2;   // 1x2
     if (currentLayout.cols === 8 && currentLayout.rows === 4) return 2;   // 2x1
@@ -381,10 +381,16 @@ function ensureRoomActionButtons() {
 
 function updateRoomSelectorUI() {
     const gridContainer = document.getElementById('roomButtonsGrid');
+    const existingActions = document.getElementById('roomActionsRow');
     if (!gridContainer) return;
 
     gridContainer.innerHTML = '';
     const totalRooms = getTotalRoomsForCurrentLayout();
+
+    if (totalRooms === 0) {
+        if (existingActions) existingActions.remove();
+        return;
+    }
 
     if (activeRoomId > totalRooms) {
         activeRoomId = 1;
@@ -412,33 +418,46 @@ function updateRoomSelectorUI() {
     ensureRoomActionButtons();
 }
 
-// --- 3. INITIALIZE DEFAULT LAYOUT & DROPDOWN ---
+// --- 3. INITIALIZE LAYOUT DROPDOWN (NO DEFAULT LAYOUT SELECTED) ---
 function initDefaultLayout() {
     const layoutSelect = document.getElementById('layoutSelect') || document.getElementById('layout-select');
     const layoutsList = getAvailableLayouts();
 
+    currentLayout = null;
+    activeRoomId = 1;
+
     if (layoutSelect) {
         layoutSelect.innerHTML = '';
+
+        const placeholderOption = document.createElement('option');
+        placeholderOption.value = '';
+        placeholderOption.textContent = '-- Select a Layout --';
+        placeholderOption.disabled = true;
+        placeholderOption.selected = true;
+        layoutSelect.appendChild(placeholderOption);
+
         layoutsList.forEach((layout, index) => {
             const option = document.createElement('option');
-            option.value = index;
+            option.value = String(index);
             option.textContent = layout.name;
             layoutSelect.appendChild(option);
         });
 
         layoutSelect.addEventListener('change', (e) => {
-            switchLayout(e.target.value);
+            if (e.target.value !== '') {
+                switchLayout(e.target.value);
+            }
         });
     }
 
-    currentLayout = layoutsList[0];
-
-    if (roomLayer && currentLayout) {
-        roomLayer.src = currentLayout.baseImage;
-        roomLayer.style.display = 'block';
+    if (roomLayer) {
+        roomLayer.removeAttribute('src');
+        roomLayer.style.display = 'none';
     }
 
-    activeRoomId = 1;
+    if (furnishingsStageLayers) furnishingsStageLayers.innerHTML = '';
+    if (furnitureStageLayers) furnitureStageLayers.innerHTML = '';
+
     updateRoomSelectorUI();
     syncFloorInputForActiveRoom();
     syncWallInputForActiveRoom();
