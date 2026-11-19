@@ -182,12 +182,15 @@ function clearSearch(inputId, clearBtnId) {
 }
 
 function hideAllDropdowns() {
-    document.querySelectorAll('.custom-dropdown').forEach(d => d.style.display = 'none');
+    document.querySelectorAll('.custom-dropdown').forEach(d => {
+        d.style.display = 'none';
+        d.classList.remove('show', 'open');
+    });
 }
 
 // --- 1. ZOOM CONTROLS ---
 function adjustZoom(amount) {
-    currentZoom = Math.max(0.5, Math.min(2.0, currentZoom + amount)); // Limits scale between 50% and 200%
+    currentZoom = Math.max(0.5, Math.min(2.0, Number((currentZoom + amount).toFixed(2))));
     applyZoom();
 }
 
@@ -197,9 +200,9 @@ function resetZoom() {
 }
 
 function applyZoom() {
-    const scaleValue = `scale(${currentZoom})`;
-    if (roomLayer) roomLayer.style.transform = scaleValue;
-    if (furnitureStageLayers) furnitureStageLayers.style.transform = scaleValue;
+    const transformValue = `translate(-50%, -50%) scale(${currentZoom})`;
+    if (roomLayer) roomLayer.style.transform = transformValue;
+    if (furnitureStageLayers) furnitureStageLayers.style.transform = transformValue;
 }
 
 // --- 2. ROOM SELECTOR UI & ROOM CLEAR ACTIONS ---
@@ -332,7 +335,6 @@ function ensureRoomActionButtons() {
         actionsRow.appendChild(clearAllBtn);
     }
 
-    // Remove legacy single button if present
     const legacyBtn = document.getElementById('clearRoomBtn');
     if (legacyBtn) legacyBtn.remove();
 
@@ -417,10 +419,11 @@ function switchLayout(index) {
     currentLayout = layoutsList[layoutIndex];
     if (roomLayer) {
         roomLayer.src = currentLayout.baseImage;
+        roomLayer.style.display = 'block';
     }
 
     activeRoomId = 1;
-    daycareState.furniture = {}; // Clear furniture on switch to prevent out-of-bound errors
+    daycareState.furniture = {};
 
     updateRoomSelectorUI();
     syncFloorInputForActiveRoom();
@@ -433,7 +436,7 @@ function switchLayout(index) {
 function canRotateSafely(col, row, itemData, rotation) {
     if (!itemData || !itemData.is2Slot) return true;
 
-    let affectedTiles = [`${col},${row}`];
+    const affectedTiles = [`${col},${row}`];
 
     if (rotation === 0) affectedTiles.push(`${col + 1},${row}`);
     else if (rotation === 1) affectedTiles.push(`${col},${row + 1}`);
@@ -445,7 +448,7 @@ function canRotateSafely(col, row, itemData, rotation) {
     const roomMinRow = Math.floor(row / 4) * 4;
     const roomMaxRow = roomMinRow + 3;
 
-    for (let tileKey of affectedTiles) {
+    for (const tileKey of affectedTiles) {
         const [c, r] = tileKey.split(',').map(Number);
         if (c < 0 || c >= currentLayout.cols || r < 0 || r >= currentLayout.rows) return false;
         if (c < roomMinCol || c > roomMaxCol || r < roomMinRow || r > roomMaxRow) {
@@ -471,8 +474,8 @@ function getRoomIdForTile(c, r) {
 
 // Helper: Coordinate label ("A1".."D4") within each 4x4 room block
 function getFallbackSlotLabel(c, r) {
-    const localCol = c % 4; // 0..3 -> 1..4
-    const localRow = r % 4; // 0..3 -> A..D
+    const localCol = c % 4;
+    const localRow = r % 4;
     const rowLetter = String.fromCharCode(65 + localRow);
     const colNumber = localCol + 1;
     return `${rowLetter}${colNumber}`;
@@ -499,7 +502,6 @@ function getRoomFlooringAnchor(roomId) {
 }
 
 function parseWallSlotKey(key) {
-    // Format: "room<id>-wall-<slotNum>" (where 1-4 is left wall and 5-8 is right wall)
     const match = key.match(/^room(\d+)-wall-(\d+)$/i);
     if (!match) {
         return { roomId: activeRoomId, slotNumber: 1, side: 'left-wall', halfIndex: 0 };
@@ -511,7 +513,7 @@ function parseWallSlotKey(key) {
         roomId,
         slotNumber,
         side: isRight ? 'right-wall' : 'left-wall',
-        halfIndex: isRight ? slotNumber - 5 : slotNumber - 1 // 0..3 within the wall half
+        halfIndex: isRight ? slotNumber - 5 : slotNumber - 1
     };
 }
 
@@ -529,13 +531,12 @@ function getRoomWallpaperAnchor(roomId, side) {
                 y: (baseCoords.y || -40) + roomRow * WALL_SLOTS_PER_HALF * 10,
                 zIndex: baseCoords.zIndex || 5
             };
-        } else {
-            return {
-                x: (baseCoords.x || 60) + roomCol * WALL_SLOTS_PER_HALF * 14,
-                y: (baseCoords.y || -40) + roomCol * WALL_SLOTS_PER_HALF * 10,
-                zIndex: baseCoords.zIndex || 5
-            };
         }
+        return {
+            x: (baseCoords.x || 60) + roomCol * WALL_SLOTS_PER_HALF * 14,
+            y: (baseCoords.y || -40) + roomCol * WALL_SLOTS_PER_HALF * 10,
+            zIndex: baseCoords.zIndex || 5
+        };
     }
 
     if (side === 'left-wall') {
@@ -544,13 +545,12 @@ function getRoomWallpaperAnchor(roomId, side) {
             y: -40 + roomRow * WALL_SLOTS_PER_HALF * 10,
             zIndex: 5
         };
-    } else {
-        return {
-            x: 60 + roomCol * WALL_SLOTS_PER_HALF * 14,
-            y: -40 + roomCol * WALL_SLOTS_PER_HALF * 10,
-            zIndex: 5
-        };
     }
+    return {
+        x: 60 + roomCol * WALL_SLOTS_PER_HALF * 14,
+        y: -40 + roomCol * WALL_SLOTS_PER_HALF * 10,
+        zIndex: 5
+    };
 }
 
 function getWallCoordinatesSafe(key) {
@@ -574,13 +574,12 @@ function getWallCoordinatesSafe(key) {
             y: anchor.y + halfIndex * 10,
             zIndex: anchor.zIndex || 5
         };
-    } else {
-        return {
-            x: anchor.x + halfIndex * 14,
-            y: anchor.y + halfIndex * 10,
-            zIndex: anchor.zIndex || 5
-        };
     }
+    return {
+        x: anchor.x + halfIndex * 14,
+        y: anchor.y + halfIndex * 10,
+        zIndex: anchor.zIndex || 5
+    };
 }
 
 // --- 6. DYNAMIC FURNITURE SLOTS & ROTATION CONTROLS ---
@@ -591,7 +590,6 @@ function buildDynamicFurnitureSlots() {
 
     if (!currentLayout) return;
 
-    // Build slots only for tiles belonging to the active 4x4 room
     for (let r = 0; r < currentLayout.rows; r++) {
         for (let c = 0; c < currentLayout.cols; c++) {
             const tileRoomId = getRoomIdForTile(c, r);
@@ -606,7 +604,6 @@ function buildDynamicFurnitureSlots() {
         }
     }
 
-    // Per-layout, per-room wall slots (1-4 on left wall half, 5-8 on right wall half)
     const wallSlots = getWallSlotsForRoom(currentLayout, activeRoomId);
     if (wallSlots.length > 0) {
         const wallHeader = document.createElement('div');
@@ -628,7 +625,6 @@ function buildDynamicFurnitureSlots() {
 function createFurnitureSlotRow(key, labelText, type, placeholderText = null) {
     const rowDiv = document.createElement('div');
     rowDiv.className = 'select-row layer-row search-container';
-    rowDiv.style.marginBottom = '10px';
 
     const badge = document.createElement('span');
     badge.className = 'layer-badge';
@@ -645,27 +641,26 @@ function createFurnitureSlotRow(key, labelText, type, placeholderText = null) {
     const rotGroup = document.createElement('div');
     rotGroup.className = 'rotation-group';
     rotGroup.style.display = (daycareState.furniture[key]?.name) ? 'flex' : 'none';
-    rotGroup.style.position = 'absolute';
-    rotGroup.style.right = '40px';
     rotGroup.style.gap = '2px';
 
     const rotCCW = document.createElement('button');
     rotCCW.type = 'button';
     rotCCW.className = 'clear-btn';
+    rotCCW.style.display = 'flex';
     rotCCW.innerHTML = '↺';
     rotCCW.title = 'Rotate Counter-Clockwise';
-    rotCCW.style.position = 'static';
     rotCCW.onclick = () => {
-        let itemData = daycareState.furniture[key];
+        const itemData = daycareState.furniture[key];
         if (!itemData || !itemData.name) return;
 
-        const masterItem = (typeof masterFurniture !== 'undefined' && masterFurniture.floorItems) ?
-            (masterFurniture.floorItems.find(i => i.name === itemData.name) ||
-                masterFurniture.wallItems.find(i => i.name === itemData.name)) : null;
+        const masterItem = (typeof masterFurniture !== 'undefined' && masterFurniture.floorItems)
+            ? (masterFurniture.floorItems.find(i => i.name === itemData.name) ||
+                masterFurniture.wallItems.find(i => i.name === itemData.name))
+            : null;
         const maxRot = (type === 'floor') ? 4 : 2;
         const [col, row] = key.includes(',') ? key.split(',').map(Number) : [0, 0];
 
-        let testRot = itemData.rotation;
+        let testRot = itemData.rotation || 0;
         for (let i = 1; i <= maxRot; i++) {
             testRot = (testRot - 1 + maxRot) % maxRot;
             if (type === 'wall' || canRotateSafely(col, row, masterItem, testRot)) {
@@ -679,20 +674,21 @@ function createFurnitureSlotRow(key, labelText, type, placeholderText = null) {
     const rotCW = document.createElement('button');
     rotCW.type = 'button';
     rotCW.className = 'clear-btn';
+    rotCW.style.display = 'flex';
     rotCW.innerHTML = '↻';
     rotCW.title = 'Rotate Clockwise';
-    rotCW.style.position = 'static';
     rotCW.onclick = () => {
-        let itemData = daycareState.furniture[key];
+        const itemData = daycareState.furniture[key];
         if (!itemData || !itemData.name) return;
 
-        const masterItem = (typeof masterFurniture !== 'undefined' && masterFurniture.floorItems) ?
-            (masterFurniture.floorItems.find(i => i.name === itemData.name) ||
-                masterFurniture.wallItems.find(i => i.name === itemData.name)) : null;
+        const masterItem = (typeof masterFurniture !== 'undefined' && masterFurniture.floorItems)
+            ? (masterFurniture.floorItems.find(i => i.name === itemData.name) ||
+                masterFurniture.wallItems.find(i => i.name === itemData.name))
+            : null;
         const maxRot = (type === 'floor') ? 4 : 2;
         const [col, row] = key.includes(',') ? key.split(',').map(Number) : [0, 0];
 
-        let testRot = itemData.rotation;
+        let testRot = itemData.rotation || 0;
         for (let i = 1; i <= maxRot; i++) {
             testRot = (testRot + 1) % maxRot;
             if (type === 'wall' || canRotateSafely(col, row, masterItem, testRot)) {
@@ -724,7 +720,6 @@ function createFurnitureSlotRow(key, labelText, type, placeholderText = null) {
     const dropdown = document.createElement('div');
     dropdown.className = 'custom-dropdown';
     dropdown.id = `dropdown-${key}`;
-    dropdown.style.display = 'none';
 
     input.addEventListener('focus', () => {
         hideAllDropdowns();
@@ -764,9 +759,9 @@ function renderFurnitureDropdown(key, type, filter = '') {
     dropdown.innerHTML = '';
     const query = filter.toLowerCase().trim();
 
-    const list = (type === 'floor') ?
-        (typeof masterFurniture !== 'undefined' ? masterFurniture.floorItems : []) :
-        (typeof masterFurniture !== 'undefined' ? masterFurniture.wallItems : []);
+    const list = (type === 'floor')
+        ? (typeof masterFurniture !== 'undefined' ? masterFurniture.floorItems : [])
+        : (typeof masterFurniture !== 'undefined' ? masterFurniture.wallItems : []);
     const filtered = list.filter(item => item.name.toLowerCase().includes(query));
 
     if (filtered.length === 0) {
@@ -795,6 +790,7 @@ function renderFurnitureDropdown(key, type, filter = '') {
         });
     }
     dropdown.style.display = 'block';
+    dropdown.classList.add('show');
 }
 
 ['floor', 'wall'].forEach(furnishType => {
@@ -850,10 +846,11 @@ function renderFurnishingDropdown(type, filter = '') {
         });
     }
     dropdown.style.display = 'block';
+    dropdown.classList.add('show');
 }
 
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('.layer-row') && !e.target.closest('#workspace-layout') && !e.target.closest('.room-selector-panel')) {
+    if (!e.target.closest('.search-container')) {
         hideAllDropdowns();
     }
 });
@@ -959,7 +956,6 @@ function renderDaycareStage() {
     furnitureStageLayers.innerHTML = '';
     if (!currentLayout) return;
 
-    // Render per-room flooring first, then per-room wallpaper on rooms with wall slots
     renderRoomFlooringsForLayout(furnitureStageLayers);
     renderRoomWallpapersForLayout(furnitureStageLayers);
 
@@ -967,9 +963,10 @@ function renderDaycareStage() {
         const placedItem = daycareState.furniture[key];
         if (!placedItem || !placedItem.name) return;
 
-        let itemData = (typeof masterFurniture !== 'undefined') ?
-            (masterFurniture.floorItems.find(i => i.name === placedItem.name) ||
-                masterFurniture.wallItems.find(i => i.name === placedItem.name)) : null;
+        const itemData = (typeof masterFurniture !== 'undefined')
+            ? (masterFurniture.floorItems.find(i => i.name === placedItem.name) ||
+                masterFurniture.wallItems.find(i => i.name === placedItem.name))
+            : null;
         if (!itemData || !itemData.images) return;
 
         const img = document.createElement('img');
