@@ -284,6 +284,7 @@ select:hover {
     transition: transform 0.1s ease-out;
 }
 
+#furnishings-stage-layers,
 #furniture-stage-layers {
     position: absolute;
     left: 50%;
