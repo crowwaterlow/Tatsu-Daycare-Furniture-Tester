@@ -98,6 +98,10 @@ function getWallSlotsForRoom(layout, roomId) {
     return layoutConfig[roomId] || [];
 }
 
+function roomHasWallpaper(layout, roomId) {
+    return getWallSlotsForRoom(layout, roomId).length > 0;
+}
+
 function getRoomsWithWallSlots(layout) {
     const totalRooms = getTotalRoomsForCurrentLayout();
     const eligibleRooms = [];
@@ -139,6 +143,7 @@ function syncFloorInputForActiveRoom() {
 }
 
 function getWallpaperNameForRoom(roomId) {
+    if (!roomHasWallpaper(currentLayout, roomId)) return '';
     if (Object.prototype.hasOwnProperty.call(daycareState.furnishings.wall, roomId)) {
         return daycareState.furnishings.wall[roomId];
     }
@@ -146,6 +151,7 @@ function getWallpaperNameForRoom(roomId) {
 }
 
 function setWallpaperNameForRoom(roomId, value) {
+    if (!roomHasWallpaper(currentLayout, roomId)) return;
     daycareState.furnishings.wall[roomId] = value;
     if (!daycareState.furnishings.wall['combined'] && value) {
         daycareState.furnishings.wall['combined'] = value;
@@ -154,7 +160,32 @@ function setWallpaperNameForRoom(roomId, value) {
 
 function syncWallInputForActiveRoom() {
     const wallInput = document.getElementById('slot-wall');
+    const clearBtn = document.getElementById('wall-clear-btn');
+    const dropdown = document.getElementById('dropdown-wall');
     if (!wallInput) return;
+
+    const hasWall = roomHasWallpaper(currentLayout, activeRoomId);
+    const wallRow = wallInput.closest('.layer-row');
+
+    if (!hasWall) {
+        wallInput.value = '';
+        wallInput.disabled = true;
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (dropdown) {
+            dropdown.style.display = 'none';
+            dropdown.classList.remove('show', 'open');
+        }
+        if (wallRow) {
+            wallRow.style.display = 'none';
+        }
+        return;
+    }
+
+    wallInput.disabled = false;
+    if (wallRow) {
+        wallRow.style.display = '';
+    }
+
     wallInput.value = getWallpaperNameForRoom(activeRoomId);
     wallInput.placeholder = `Search wallpaper for Room ${activeRoomId}...`;
     onSearchInput(wallInput, 'wall-clear-btn');
@@ -259,7 +290,9 @@ function clearActiveRoomFurnishings(shouldRender = true) {
     const prevWall = daycareState.furnishings.wall[roomToClear];
 
     daycareState.furnishings.floor[roomToClear] = '';
-    daycareState.furnishings.wall[roomToClear] = '';
+    if (roomHasWallpaper(currentLayout, roomToClear)) {
+        daycareState.furnishings.wall[roomToClear] = '';
+    }
 
     if (prevFloor && daycareState.furnishings.floor['combined'] === prevFloor) {
         daycareState.furnishings.floor['combined'] = '';
@@ -837,11 +870,13 @@ function renderFurnitureDropdown(key, type, filter = '') {
     if (!input) return;
 
     input.addEventListener('focus', () => {
+        if (furnishType === 'wall' && !roomHasWallpaper(currentLayout, activeRoomId)) return;
         hideAllDropdowns();
         renderFurnishingDropdown(furnishType, input.value);
     });
 
     input.addEventListener('input', (e) => {
+        if (furnishType === 'wall' && !roomHasWallpaper(currentLayout, activeRoomId)) return;
         if (furnishType === 'floor') {
             setFlooringNameForRoom(activeRoomId, e.target.value);
         } else {
@@ -854,6 +889,8 @@ function renderFurnitureDropdown(key, type, filter = '') {
 });
 
 function renderFurnishingDropdown(type, filter = '') {
+    if (type === 'wall' && !roomHasWallpaper(currentLayout, activeRoomId)) return;
+
     const dropdown = document.getElementById(`dropdown-${type}`);
     if (!dropdown) return;
     dropdown.innerHTML = '';
