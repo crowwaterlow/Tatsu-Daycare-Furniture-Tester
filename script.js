@@ -5,15 +5,32 @@ let activeRoomId = 1;
 
 const daycareState = {
     furnishings: {
-        floor: {}, 
-        wall: {}   
+        floor: {},
+        wall: {}
     },
-    furniture: {}  
+    furniture: {}
 };
+
+const FALLBACK_LAYOUTS = [
+    { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Layouts/1x1.png" },
+    { name: "1x2 Room Layout", cols: 4, rows: 8, baseImage: "Images/Layouts/1x2.png" },
+    { name: "2x1 Room Layout", cols: 8, rows: 4, baseImage: "Images/Layouts/2x1.png" },
+    { name: "2x2 Room Layout", cols: 8, rows: 8, baseImage: "Images/Layouts/2x2.png" },
+    { name: "2x3 Room Layout", cols: 8, rows: 12, baseImage: "Images/Layouts/2x3.png" },
+    { name: "3x2 Room Layout", cols: 12, rows: 8, baseImage: "Images/Layouts/3x2.png" },
+    { name: "3x3 Room Layout", cols: 12, rows: 12, baseImage: "Images/Layouts/3x3.png" }
+];
 
 // DOM Elements
 const roomLayer = document.getElementById('room-layer');
 const furnitureStageLayers = document.getElementById('furniture-stage-layers');
+
+function getAvailableLayouts() {
+    if (typeof masterLayouts !== 'undefined' && Array.isArray(masterLayouts) && masterLayouts.length > 0) {
+        return masterLayouts;
+    }
+    return FALLBACK_LAYOUTS;
+}
 
 // Utility: Toggle Clear Button
 function onSearchInput(inputElem, clearBtnId) {
@@ -70,10 +87,10 @@ function getTotalRoomsForCurrentLayout() {
 function updateRoomSelectorUI() {
     const gridContainer = document.getElementById('roomButtonsGrid');
     if (!gridContainer) return;
-    
+
     gridContainer.innerHTML = '';
     const totalRooms = getTotalRoomsForCurrentLayout();
-    
+
     if (activeRoomId > totalRooms) {
         activeRoomId = 1;
     }
@@ -83,7 +100,7 @@ function updateRoomSelectorUI() {
         btn.type = 'button';
         btn.className = `room-btn ${i === activeRoomId ? 'active' : ''}`;
         btn.innerHTML = `<span>🏠</span> Room ${i}`;
-        
+
         btn.onclick = () => {
             activeRoomId = i;
             document.querySelectorAll('.room-btn').forEach(b => b.classList.remove('active'));
@@ -98,17 +115,7 @@ function updateRoomSelectorUI() {
 // --- 3. INITIALIZE DEFAULT LAYOUT & DROPDOWN ---
 function initDefaultLayout() {
     const layoutSelect = document.getElementById('layoutSelect') || document.getElementById('layout-select');
-    
-    // Complete embedded list of all 7 layouts for reliable mobile loading
-    let layoutsList = (typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) ? masterLayouts : [
-        { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Rooms/1x1 Daycare.png" },
-        { name: "1x2 Room Layout", cols: 4, rows: 8, baseImage: "Images/Rooms/1x2 Daycare.png" },
-        { name: "2x1 Room Layout", cols: 8, rows: 4, baseImage: "Images/Rooms/2x1 Daycare.png" },
-        { name: "2x2 Room Layout", cols: 8, rows: 8, baseImage: "Images/Rooms/2x2 Daycare.png" },
-        { name: "2x3 Room Layout", cols: 8, rows: 12, baseImage: "Images/Rooms/2x3 Daycare.png" },
-        { name: "3x2 Room Layout", cols: 12, rows: 8, baseImage: "Images/Rooms/3x2 Daycare.png" },
-        { name: "3x3 Room Layout", cols: 12, rows: 12, baseImage: "Images/Rooms/3x3 Daycare.png" }
-    ];
+    const layoutsList = getAvailableLayouts();
 
     if (layoutSelect) {
         layoutSelect.innerHTML = '';
@@ -118,13 +125,13 @@ function initDefaultLayout() {
             option.textContent = layout.name;
             layoutSelect.appendChild(option);
         });
-        
+
         layoutSelect.addEventListener('change', (e) => {
             switchLayout(e.target.value);
         });
     }
 
-    currentLayout = layoutsList[0]; 
+    currentLayout = layoutsList[0];
 
     if (roomLayer && currentLayout) {
         roomLayer.src = currentLayout.baseImage;
@@ -139,43 +146,33 @@ function initDefaultLayout() {
 
 // --- 4. SWITCH LAYOUT DYNAMICALLY ---
 function switchLayout(index) {
-    let layoutsList = (typeof masterLayouts !== 'undefined' && masterLayouts.length > 0) ? masterLayouts : [
-        { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Rooms/1x1 Daycare.png" },
-        { name: "1x2 Room Layout", cols: 4, rows: 8, baseImage: "Images/Rooms/1x2 Daycare.png" },
-        { name: "2x1 Room Layout", cols: 8, rows: 4, baseImage: "Images/Rooms/2x1 Daycare.png" },
-        { name: "2x2 Room Layout", cols: 8, rows: 8, baseImage: "Images/Rooms/2x2 Daycare.png" },
-        { name: "2x3 Room Layout", cols: 8, rows: 12, baseImage: "Images/Rooms/2x3 Daycare.png" },
-        { name: "3x2 Room Layout", cols: 12, rows: 8, baseImage: "Images/Rooms/3x2 Daycare.png" },
-        { name: "3x3 Room Layout", cols: 12, rows: 12, baseImage: "Images/Rooms/3x Daycare3.png" }
-    ];
+    const layoutsList = getAvailableLayouts();
+    const layoutIndex = Number(index);
+    if (!layoutsList[layoutIndex]) return;
 
-    if (!layoutsList[index]) return;
-    
-    currentLayout = layoutsList[index];
+    currentLayout = layoutsList[layoutIndex];
     if (roomLayer) {
         roomLayer.src = currentLayout.baseImage;
     }
-    
+
     activeRoomId = 1;
-    daycareState.furniture = {}; 
+    daycareState.furniture = {}; // Clear furniture on switch to prevent out-of-bound errors
 
     updateRoomSelectorUI();
     buildDynamicFurnitureSlots();
     renderDaycareStage();
 }
 
-
-
 // --- 5. ROTATION BOUNDARY VALIDATION ---
 function canRotateSafely(col, row, itemData, rotation) {
-    if (!itemData || !itemData.is2Slot) return true; 
+    if (!itemData || !itemData.is2Slot) return true;
 
     let affectedTiles = [`${col},${row}`];
-    
-    if (rotation === 0) affectedTiles.push(`${col + 1},${row}`);       
-    else if (rotation === 1) affectedTiles.push(`${col},${row + 1}`);  
-    else if (rotation === 2) affectedTiles.push(`${col - 1},${row}`);  
-    else if (rotation === 3) affectedTiles.push(`${col},${row - 1}`);  
+
+    if (rotation === 0) affectedTiles.push(`${col + 1},${row}`);
+    else if (rotation === 1) affectedTiles.push(`${col},${row + 1}`);
+    else if (rotation === 2) affectedTiles.push(`${col - 1},${row}`);
+    else if (rotation === 3) affectedTiles.push(`${col},${row - 1}`);
 
     const roomMinCol = Math.floor(col / 4) * 4;
     const roomMaxCol = roomMinCol + 3;
@@ -186,20 +183,47 @@ function canRotateSafely(col, row, itemData, rotation) {
         const [c, r] = tileKey.split(',').map(Number);
         if (c < 0 || c >= currentLayout.cols || r < 0 || r >= currentLayout.rows) return false;
         if (c < roomMinCol || c > roomMaxCol || r < roomMinRow || r > roomMaxRow) {
-            return false; 
+            return false;
         }
     }
     return true;
 }
 
-// Helper: Extract Room ID for a tile from layouts.js custom label function
+// Helper: Resolve Room ID (1-based) for a 4x4 room block at tile (c, r)
 function getRoomIdForTile(c, r) {
     if (currentLayout && typeof currentLayout.getCustomSlotLabel === 'function') {
         const label = currentLayout.getCustomSlotLabel(c, r);
         const match = label.match(/Room\s+(\d+)/i);
         if (match) return parseInt(match[1], 10);
     }
-    return 1;
+
+    const roomCol = Math.floor(c / 4);
+    const roomRow = Math.floor(r / 4);
+    const roomsPerRow = Math.max(1, Math.ceil((currentLayout?.cols || 4) / 4));
+    return roomRow * roomsPerRow + roomCol + 1;
+}
+
+// Helper: Fallback label ("Room X - Slot Y", 1..16 per 4x4 room)
+function getFallbackSlotLabel(c, r) {
+    const roomId = getRoomIdForTile(c, r);
+    const localCol = c % 4;
+    const localRow = r % 4;
+    const slotNumber = localRow * 4 + localCol + 1;
+    return `Room ${roomId} - Slot ${slotNumber}`;
+}
+
+function getTileCoordinatesSafe(c, r) {
+    if (currentLayout && typeof currentLayout.getTileCoordinates === 'function') {
+        return currentLayout.getTileCoordinates(c, r);
+    }
+    return { x: (c - r) * 32, y: (c + r) * 16, zIndex: 10 + c + r };
+}
+
+function getWallCoordinatesSafe(side) {
+    if (currentLayout && typeof currentLayout.getWallCoordinates === 'function') {
+        return currentLayout.getWallCoordinates(side);
+    }
+    return { x: side === 'left-wall' ? -60 : 60, y: -40, zIndex: 5 };
 }
 
 // --- 6. DYNAMIC FURNITURE SLOTS & ROTATION CONTROLS ---
@@ -210,7 +234,7 @@ function buildDynamicFurnitureSlots() {
 
     if (!currentLayout) return;
 
-    // Build slots only for tiles belonging to the active room
+    // Build slots only for tiles belonging to the active 4x4 room
     for (let r = 0; r < currentLayout.rows; r++) {
         for (let c = 0; c < currentLayout.cols; c++) {
             const tileRoomId = getRoomIdForTile(c, r);
@@ -219,7 +243,7 @@ function buildDynamicFurnitureSlots() {
             const tileKey = `${c},${r}`;
             const slotLabel = (typeof currentLayout.getCustomSlotLabel === 'function')
                 ? currentLayout.getCustomSlotLabel(c, r)
-                : `Tile [${c},${r}]`;
+                : getFallbackSlotLabel(c, r);
 
             container.appendChild(createFurnitureSlotRow(tileKey, slotLabel, 'floor'));
         }
@@ -271,8 +295,8 @@ function createFurnitureSlotRow(key, labelText, type) {
         if (!itemData || !itemData.name) return;
 
         const masterItem = (typeof masterFurniture !== 'undefined' && masterFurniture.floorItems) ?
-                           (masterFurniture.floorItems.find(i => i.name === itemData.name) ||
-                            masterFurniture.wallItems.find(i => i.name === itemData.name)) : null;
+            (masterFurniture.floorItems.find(i => i.name === itemData.name) ||
+                masterFurniture.wallItems.find(i => i.name === itemData.name)) : null;
         const maxRot = (type === 'floor') ? 4 : 2;
         const [col, row] = key.includes(',') ? key.split(',').map(Number) : [0, 0];
 
@@ -298,8 +322,8 @@ function createFurnitureSlotRow(key, labelText, type) {
         if (!itemData || !itemData.name) return;
 
         const masterItem = (typeof masterFurniture !== 'undefined' && masterFurniture.floorItems) ?
-                           (masterFurniture.floorItems.find(i => i.name === itemData.name) ||
-                            masterFurniture.wallItems.find(i => i.name === itemData.name)) : null;
+            (masterFurniture.floorItems.find(i => i.name === itemData.name) ||
+                masterFurniture.wallItems.find(i => i.name === itemData.name)) : null;
         const maxRot = (type === 'floor') ? 4 : 2;
         const [col, row] = key.includes(',') ? key.split(',').map(Number) : [0, 0];
 
@@ -323,7 +347,7 @@ function createFurnitureSlotRow(key, labelText, type) {
     clearBtn.innerHTML = '&times;';
     clearBtn.id = `clear-${key}`;
     clearBtn.style.display = input.value ? 'flex' : 'none';
-    
+
     clearBtn.onclick = () => {
         input.value = '';
         delete daycareState.furniture[key];
@@ -374,10 +398,10 @@ function renderFurnitureDropdown(key, type, filter = '') {
     if (!dropdown) return;
     dropdown.innerHTML = '';
     const query = filter.toLowerCase().trim();
-    
-    const list = (type === 'floor') ? 
-                 (typeof masterFurniture !== 'undefined' ? masterFurniture.floorItems : []) : 
-                 (typeof masterFurniture !== 'undefined' ? masterFurniture.wallItems : []);
+
+    const list = (type === 'floor') ?
+        (typeof masterFurniture !== 'undefined' ? masterFurniture.floorItems : []) :
+        (typeof masterFurniture !== 'undefined' ? masterFurniture.wallItems : []);
     const filtered = list.filter(item => item.name.toLowerCase().includes(query));
 
     if (filtered.length === 0) {
@@ -392,7 +416,7 @@ function renderFurnitureDropdown(key, type, filter = '') {
                 const inputEl = document.querySelector(`input[data-key="${key}"]`);
                 if (inputEl) inputEl.value = itemData.name;
                 daycareState.furniture[key] = { name: itemData.name, rotation: 0 };
-                
+
                 const row = inputEl ? inputEl.parentNode : null;
                 if (row) {
                     row.querySelector('.rotation-group').style.display = 'flex';
@@ -411,7 +435,7 @@ function renderFurnitureDropdown(key, type, filter = '') {
 ['floor', 'wall'].forEach(furnishType => {
     const input = document.getElementById(`slot-${furnishType}`);
     if (!input) return;
-    
+
     input.addEventListener('focus', () => {
         hideAllDropdowns();
         renderFurnishingDropdown(furnishType, input.value);
@@ -466,7 +490,7 @@ function processCombinedWallpaper(imageSrc, callback) {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = imageSrc;
-    
+
     img.onload = function() {
         const width = img.width;
         const height = img.height;
@@ -502,7 +526,7 @@ function renderDaycareStage() {
                 const leftWall = document.createElement('img');
                 leftWall.src = splitImages.left;
                 leftWall.className = 'layer-img';
-                let lCoords = currentLayout.getWallCoordinates('left-wall');
+                let lCoords = getWallCoordinatesSafe('left-wall');
                 leftWall.style.transform = `translate(calc(-50% + ${lCoords.x}px), calc(-50% + ${lCoords.y}px))`;
                 leftWall.style.zIndex = lCoords.zIndex || 5;
                 furnitureStageLayers.appendChild(leftWall);
@@ -510,7 +534,7 @@ function renderDaycareStage() {
                 const rightWall = document.createElement('img');
                 rightWall.src = splitImages.right;
                 rightWall.className = 'layer-img';
-                let rCoords = currentLayout.getWallCoordinates('right-wall');
+                let rCoords = getWallCoordinatesSafe('right-wall');
                 rightWall.style.transform = `translate(calc(-50% + ${rCoords.x}px), calc(-50% + ${rCoords.y}px))`;
                 rightWall.style.zIndex = rCoords.zIndex || 5;
                 furnitureStageLayers.appendChild(rightWall);
@@ -522,14 +546,14 @@ function renderDaycareStage() {
         const placedItem = daycareState.furniture[key];
         if (!placedItem || !placedItem.name) return;
 
-        let itemData = (typeof masterFurniture !== 'undefined') ? 
-                       (masterFurniture.floorItems.find(i => i.name === placedItem.name) ||
-                        masterFurniture.wallItems.find(i => i.name === placedItem.name)) : null;
+        let itemData = (typeof masterFurniture !== 'undefined') ?
+            (masterFurniture.floorItems.find(i => i.name === placedItem.name) ||
+                masterFurniture.wallItems.find(i => i.name === placedItem.name)) : null;
         if (!itemData || !itemData.images) return;
 
         const img = document.createElement('img');
         const rotIndex = placedItem.rotation || 0;
-        
+
         img.src = itemData.images[rotIndex];
         img.className = 'layer-img';
         img.alt = placedItem.name;
@@ -537,9 +561,9 @@ function renderDaycareStage() {
         let coords = { x: 0, y: 0 };
         if (key.includes(',')) {
             const [c, r] = key.split(',').map(Number);
-            coords = currentLayout.getTileCoordinates(c, r);
+            coords = getTileCoordinatesSafe(c, r);
         } else {
-            coords = currentLayout.getWallCoordinates(key);
+            coords = getWallCoordinatesSafe(key);
         }
 
         img.style.transform = `translate(calc(-50% + ${coords.x}px), calc(-50% + ${coords.y}px))`;
