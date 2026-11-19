@@ -66,7 +66,7 @@
                             </div>
 
                             <div class="select-row layer-row search-container">
-                                <label for="slot-wall" class="layer-badge">Wall</label>
+                                <label for="slot-wall" class="layer-badge">Wallpaper</label>
                                 <input
                                     id="slot-wall"
                                     class="furnishing-search"
@@ -104,7 +104,6 @@
             <main class="stage-panel canvas-viewport">
                 <div class="stage-wrapper">
                     <div class="zoom-controls" role="group" aria-label="Zoom controls">
-                        <!-- Zoom Toolbar -->
                         <button type="button" class="zoom-btn" onclick="adjustZoom(-0.1)" title="Zoom Out" aria-label="Zoom Out">&minus;</button>
                         <button type="button" class="zoom-btn" onclick="resetZoom()" title="Reset Zoom" aria-label="Reset Zoom to 100%">100%</button>
                         <button type="button" class="zoom-btn" onclick="adjustZoom(0.1)" title="Zoom In" aria-label="Zoom In">+</button>
@@ -113,7 +112,9 @@
                     <div id="stage" class="stage stage-viewport">
                         <!-- Base Room Background -->
                         <img id="room-layer" class="layer-img" alt="Daycare Layout" />
-                        <!-- Dynamic Furniture & Wallpaper Layers Rendered via JavaScript -->
+                        <!-- Floor & Wallpaper Layers -->
+                        <div id="furnishings-stage-layers"></div>
+                        <!-- Floor & Wall Furniture Layers -->
                         <div id="furniture-stage-layers"></div>
                     </div>
                 </div>
