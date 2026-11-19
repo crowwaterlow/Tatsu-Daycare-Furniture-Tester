@@ -12,13 +12,13 @@ const daycareState = {
 };
 
 const FALLBACK_LAYOUTS = [
-    { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Rooms/1x1 Daycare.png" },
-    { name: "1x2 Room Layout", cols: 4, rows: 8, baseImage: "Images/Rooms/1x2 Daycare.png" },
-    { name: "2x1 Room Layout", cols: 8, rows: 4, baseImage: "Images/Rooms/2x1 Daycare.png" },
-    { name: "2x2 Room Layout", cols: 8, rows: 8, baseImage: "Images/Rooms/2x2 Daycare.png" },
-    { name: "2x3 Room Layout", cols: 8, rows: 12, baseImage: "Images/Rooms/2x3 Daycare.png" },
-    { name: "3x2 Room Layout", cols: 12, rows: 8, baseImage: "Images/Rooms/3x2 Daycare.png" },
-    { name: "3x3 Room Layout", cols: 12, rows: 12, baseImage: "Images/Rooms/3x3 Daycare.png" }
+    { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Layouts/1x1.png" },
+    { name: "1x2 Room Layout", cols: 4, rows: 8, baseImage: "Images/Layouts/1x2.png" },
+    { name: "2x1 Room Layout", cols: 8, rows: 4, baseImage: "Images/Layouts/2x1.png" },
+    { name: "2x2 Room Layout", cols: 8, rows: 8, baseImage: "Images/Layouts/2x2.png" },
+    { name: "2x3 Room Layout", cols: 8, rows: 12, baseImage: "Images/Layouts/2x3.png" },
+    { name: "3x2 Room Layout", cols: 12, rows: 8, baseImage: "Images/Layouts/3x2.png" },
+    { name: "3x3 Room Layout", cols: 12, rows: 12, baseImage: "Images/Layouts/3x3.png" }
 ];
 
 // DOM Elements
@@ -203,13 +203,13 @@ function getRoomIdForTile(c, r) {
     return roomRow * roomsPerRow + roomCol + 1;
 }
 
-// Helper: Fallback label ("Room X - Slot Y", 1..16 per 4x4 room)
+// Helper: Coordinate label ("A1".."D4") within each 4x4 room block
 function getFallbackSlotLabel(c, r) {
-    const roomId = getRoomIdForTile(c, r);
-    const localCol = c % 4;
-    const localRow = r % 4;
-    const slotNumber = localRow * 4 + localCol + 1;
-    return `Room ${roomId} - Slot ${slotNumber}`;
+    const localCol = c % 4; // 0..3 -> 1..4
+    const localRow = r % 4; // 0..3 -> A..D
+    const rowLetter = String.fromCharCode(65 + localRow);
+    const colNumber = localCol + 1;
+    return `${rowLetter}${colNumber}`;
 }
 
 function getTileCoordinatesSafe(c, r) {
