@@ -12,13 +12,13 @@ const daycareState = {
 };
 
 const FALLBACK_LAYOUTS = [
-    { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Layouts/1x1.png" },
-    { name: "1x2 Room Layout", cols: 4, rows: 8, baseImage: "Images/Layouts/1x2.png" },
-    { name: "2x1 Room Layout", cols: 8, rows: 4, baseImage: "Images/Layouts/2x1.png" },
-    { name: "2x2 Room Layout", cols: 8, rows: 8, baseImage: "Images/Layouts/2x2.png" },
-    { name: "2x3 Room Layout", cols: 8, rows: 12, baseImage: "Images/Layouts/2x3.png" },
-    { name: "3x2 Room Layout", cols: 12, rows: 8, baseImage: "Images/Layouts/3x2.png" },
-    { name: "3x3 Room Layout", cols: 12, rows: 12, baseImage: "Images/Layouts/3x3.png" }
+    { name: "1x1 Room Layout", cols: 4, rows: 4, baseImage: "Images/Rooms/1x1 Daycare.png" },
+    { name: "1x2 Room Layout", cols: 4, rows: 8, baseImage: "Images/Rooms/1x2 Daycare.png" },
+    { name: "2x1 Room Layout", cols: 8, rows: 4, baseImage: "Images/Rooms/2x1 Daycare.png" },
+    { name: "2x2 Room Layout", cols: 8, rows: 8, baseImage: "Images/Rooms/2x2 Daycare.png" },
+    { name: "2x3 Room Layout", cols: 8, rows: 12, baseImage: "Images/Rooms/2x3 Daycare.png" },
+    { name: "3x2 Room Layout", cols: 12, rows: 8, baseImage: "Images/Rooms/3x2 Daycare.png" },
+    { name: "3x3 Room Layout", cols: 12, rows: 12, baseImage: "Images/Rooms/3x3 Daycare.png" }
 ];
 
 // DOM Elements
