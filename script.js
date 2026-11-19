@@ -8,10 +8,10 @@ const splitWallpaperCache = {};
 
 const daycareState = {
     furnishings: {
-        floor: {}, // Supports combined floor input and per-room flooring (floor[roomId])
-        wall: {}   // Supports combined wall input and per-room wallpaper (wall[roomId])
+        floor: {}, // Per-room flooring (floor[roomId])
+        wall: {}   // Per-room wallpaper (wall[roomId])
     },
-    furniture: {}
+    furniture: {}  // Floor tiles ("c,r") and wall furniture slots ("room<id>-wall-<slotNum>")
 };
 
 const FALLBACK_LAYOUTS = [
@@ -66,6 +66,7 @@ const WALL_SLOT_MAP = {
 
 // DOM Elements
 const roomLayer = document.getElementById('room-layer');
+const furnishingsStageLayers = document.getElementById('furnishings-stage-layers');
 const furnitureStageLayers = document.getElementById('furniture-stage-layers');
 
 function getAvailableLayouts() {
@@ -114,6 +115,7 @@ function getRoomsWithWallSlots(layout) {
     return eligibleRooms;
 }
 
+// --- FURNISHINGS STATE HELPERS (FLOOR & WALLPAPER) ---
 function getFlooringNameForRoom(roomId) {
     if (Object.prototype.hasOwnProperty.call(daycareState.furnishings.floor, roomId)) {
         return daycareState.furnishings.floor[roomId];
@@ -202,6 +204,7 @@ function resetZoom() {
 function applyZoom() {
     const transformValue = `translate(-50%, -50%) scale(${currentZoom})`;
     if (roomLayer) roomLayer.style.transform = transformValue;
+    if (furnishingsStageLayers) furnishingsStageLayers.style.transform = transformValue;
     if (furnitureStageLayers) furnitureStageLayers.style.transform = transformValue;
 }
 
@@ -501,7 +504,77 @@ function getRoomFlooringAnchor(roomId) {
     };
 }
 
-function parseWallSlotKey(key) {
+// --- WALLPAPER ANCHORS (SEPARATE FROM WALL FURNITURE) ---
+function getWallpaperAnchorSafe(roomId, side) {
+    const roomsPerRow = getRoomsPerRow();
+    const roomIndex = Math.max(0, roomId - 1);
+    const roomCol = roomIndex % roomsPerRow;
+    const roomRow = Math.floor(roomIndex / roomsPerRow);
+
+    if (currentLayout && typeof currentLayout.getWallpaperCoordinates === 'function') {
+        const customAnchor = currentLayout.getWallpaperCoordinates(side, roomId);
+        if (customAnchor && typeof customAnchor.x === 'number' && typeof customAnchor.y === 'number') {
+            return {
+                x: customAnchor.x,
+                y: customAnchor.y,
+                zIndex: customAnchor.zIndex || 4
+            };
+        }
+    }
+
+    if (currentLayout && typeof currentLayout.getWallCoordinates === 'function') {
+        const baseCoords = currentLayout.getWallCoordinates(side, 0, roomId, side === 'left-wall' ? 1 : 5) || { x: 0, y: 0, zIndex: 4 };
+        if (side === 'left-wall') {
+            return {
+                x: (baseCoords.x || -60) - roomRow * WALL_SLOTS_PER_HALF * 14,
+                y: (baseCoords.y || -40) + roomRow * WALL_SLOTS_PER_HALF * 10,
+                zIndex: 4
+            };
+        }
+        return {
+            x: (baseCoords.x || 60) + roomCol * WALL_SLOTS_PER_HALF * 14,
+            y: (baseCoords.y || -40) + roomCol * WALL_SLOTS_PER_HALF * 10,
+            zIndex: 4
+        };
+    }
+
+    if (side === 'left-wall') {
+        return {
+            x: -60 - roomRow * WALL_SLOTS_PER_HALF * 14,
+            y: -40 + roomRow * WALL_SLOTS_PER_HALF * 10,
+            zIndex: 4
+        };
+    }
+    return {
+        x: 60 + roomCol * WALL_SLOTS_PER_HALF * 14,
+        y: -40 + roomCol * WALL_SLOTS_PER_HALF * 10,
+        zIndex: 4
+    };
+}
+
+function getCombinedWallpaperAnchorSafe(roomId) {
+    if (currentLayout && typeof currentLayout.getCombinedWallpaperCoordinates === 'function') {
+        const customCombined = currentLayout.getCombinedWallpaperCoordinates(roomId);
+        if (customCombined && typeof customCombined.x === 'number' && typeof customCombined.y === 'number') {
+            return {
+                x: customCombined.x,
+                y: customCombined.y,
+                zIndex: customCombined.zIndex || 4
+            };
+        }
+    }
+
+    const leftAnchor = getWallpaperAnchorSafe(roomId, 'left-wall');
+    const rightAnchor = getWallpaperAnchorSafe(roomId, 'right-wall');
+    return {
+        x: (leftAnchor.x + rightAnchor.x) / 2,
+        y: Math.min(leftAnchor.y, rightAnchor.y),
+        zIndex: leftAnchor.zIndex || rightAnchor.zIndex || 4
+    };
+}
+
+// --- WALL FURNITURE COORDINATES (SEPARATE FROM WALLPAPERS) ---
+function parseWallFurnitureSlotKey(key) {
     const match = key.match(/^room(\d+)-wall-(\d+)$/i);
     if (!match) {
         return { roomId: activeRoomId, slotNumber: 1, side: 'left-wall', halfIndex: 0 };
@@ -517,45 +590,9 @@ function parseWallSlotKey(key) {
     };
 }
 
-function getRoomWallpaperAnchor(roomId, side) {
-    const roomsPerRow = getRoomsPerRow();
-    const roomIndex = Math.max(0, roomId - 1);
-    const roomCol = roomIndex % roomsPerRow;
-    const roomRow = Math.floor(roomIndex / roomsPerRow);
-
-    if (currentLayout && typeof currentLayout.getWallCoordinates === 'function') {
-        const baseCoords = currentLayout.getWallCoordinates(side, 0, roomId, side === 'left-wall' ? 1 : 5) || { x: 0, y: 0, zIndex: 5 };
-        if (side === 'left-wall') {
-            return {
-                x: (baseCoords.x || -60) - roomRow * WALL_SLOTS_PER_HALF * 14,
-                y: (baseCoords.y || -40) + roomRow * WALL_SLOTS_PER_HALF * 10,
-                zIndex: baseCoords.zIndex || 5
-            };
-        }
-        return {
-            x: (baseCoords.x || 60) + roomCol * WALL_SLOTS_PER_HALF * 14,
-            y: (baseCoords.y || -40) + roomCol * WALL_SLOTS_PER_HALF * 10,
-            zIndex: baseCoords.zIndex || 5
-        };
-    }
-
-    if (side === 'left-wall') {
-        return {
-            x: -60 - roomRow * WALL_SLOTS_PER_HALF * 14,
-            y: -40 + roomRow * WALL_SLOTS_PER_HALF * 10,
-            zIndex: 5
-        };
-    }
-    return {
-        x: 60 + roomCol * WALL_SLOTS_PER_HALF * 14,
-        y: -40 + roomCol * WALL_SLOTS_PER_HALF * 10,
-        zIndex: 5
-    };
-}
-
-function getWallCoordinatesSafe(key) {
-    const { roomId, slotNumber, side, halfIndex } = parseWallSlotKey(key);
-    const anchor = getRoomWallpaperAnchor(roomId, side);
+function getWallFurnitureCoordinatesSafe(key) {
+    const { roomId, slotNumber, side, halfIndex } = parseWallFurnitureSlotKey(key);
+    const anchor = getWallpaperAnchorSafe(roomId, side);
 
     if (currentLayout && typeof currentLayout.getWallCoordinates === 'function') {
         const slotCoords = currentLayout.getWallCoordinates(side, halfIndex, roomId, slotNumber);
@@ -563,7 +600,7 @@ function getWallCoordinatesSafe(key) {
             return {
                 x: slotCoords.x,
                 y: slotCoords.y,
-                zIndex: slotCoords.zIndex || anchor.zIndex || 5
+                zIndex: Math.max(15, slotCoords.zIndex || 15)
             };
         }
     }
@@ -572,13 +609,13 @@ function getWallCoordinatesSafe(key) {
         return {
             x: anchor.x - halfIndex * 14,
             y: anchor.y + halfIndex * 10,
-            zIndex: anchor.zIndex || 5
+            zIndex: 15 + halfIndex
         };
     }
     return {
         x: anchor.x + halfIndex * 14,
         y: anchor.y + halfIndex * 10,
-        zIndex: anchor.zIndex || 5
+        zIndex: 15 + halfIndex
     };
 }
 
@@ -590,6 +627,7 @@ function buildDynamicFurnitureSlots() {
 
     if (!currentLayout) return;
 
+    // Floor furniture slots (4x4 tiles for active room)
     for (let r = 0; r < currentLayout.rows; r++) {
         for (let c = 0; c < currentLayout.cols; c++) {
             const tileRoomId = getRoomIdForTile(c, r);
@@ -604,11 +642,12 @@ function buildDynamicFurnitureSlots() {
         }
     }
 
+    // Wall furniture slots (dedicated section separate from wallpaper)
     const wallSlots = getWallSlotsForRoom(currentLayout, activeRoomId);
     if (wallSlots.length > 0) {
         const wallHeader = document.createElement('div');
         wallHeader.className = 'swap-label';
-        wallHeader.textContent = `ROOM ${activeRoomId} - WALL FURNITURE & WALLPAPER`;
+        wallHeader.textContent = `ROOM ${activeRoomId} - WALL FURNITURE`;
         container.appendChild(wallHeader);
 
         wallSlots.forEach(slotNum => {
@@ -823,7 +862,7 @@ function renderFurnishingDropdown(type, filter = '') {
     const filtered = list.filter(item => item.name.toLowerCase().includes(query));
 
     if (filtered.length === 0) {
-        dropdown.innerHTML = `<div class="dropdown-no-results">No matching ${type}s</div>`;
+        dropdown.innerHTML = `<div class="dropdown-no-results">No matching ${type === 'wall' ? 'wallpapers' : 'floors'}</div>`;
     } else {
         filtered.forEach(itemData => {
             const div = document.createElement('div');
@@ -855,7 +894,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// --- 8. FLOORING, WALLPAPER SPLITTER & PER-ROOM STAGE RENDERER ---
+// --- 8. SEPARATED FURNISHINGS (FLOOR & WALLPAPER) & FURNITURE RENDERERS ---
 function processCombinedWallpaper(imageSrc, callback) {
     if (splitWallpaperCache[imageSrc]) {
         callback(splitWallpaperCache[imageSrc]);
@@ -891,7 +930,7 @@ function processCombinedWallpaper(imageSrc, callback) {
 }
 
 function renderRoomFlooringsForLayout(container) {
-    if (typeof masterFurnishings === 'undefined' || !Array.isArray(masterFurnishings.floor)) return;
+    if (!container || typeof masterFurnishings === 'undefined' || !Array.isArray(masterFurnishings.floor)) return;
 
     const totalRooms = getTotalRoomsForCurrentLayout();
     for (let roomId = 1; roomId <= totalRooms; roomId++) {
@@ -913,7 +952,7 @@ function renderRoomFlooringsForLayout(container) {
 }
 
 function renderRoomWallpapersForLayout(container) {
-    if (typeof masterFurnishings === 'undefined' || !Array.isArray(masterFurnishings.wall)) return;
+    if (!container || typeof masterFurnishings === 'undefined' || !Array.isArray(masterFurnishings.wall)) return;
 
     const eligibleRooms = getRoomsWithWallSlots(currentLayout);
     eligibleRooms.forEach(roomInfo => {
@@ -923,6 +962,21 @@ function renderRoomWallpapersForLayout(container) {
         const wallpaperData = masterFurnishings.wall.find(i => i.name === wallpaperName);
         if (!wallpaperData || !wallpaperData.image) return;
 
+        // Render whole combined wallpaper when a room uses both left (1-4) and right (5-8) walls
+        if (roomInfo.hasLeft && roomInfo.hasRight) {
+            const wholeWall = document.createElement('img');
+            wholeWall.src = wallpaperData.image;
+            wholeWall.className = 'layer-img wallpaper-layer whole-wallpaper-layer';
+            wholeWall.dataset.roomId = String(roomInfo.roomId);
+            wholeWall.dataset.side = 'both-walls';
+            const cCoords = getCombinedWallpaperAnchorSafe(roomInfo.roomId);
+            wholeWall.style.transform = `translate(calc(-50% + ${cCoords.x}px), calc(-50% + ${cCoords.y}px))`;
+            wholeWall.style.zIndex = cCoords.zIndex || 4;
+            container.appendChild(wholeWall);
+            return;
+        }
+
+        // Otherwise split and paste only the needed half
         processCombinedWallpaper(wallpaperData.image, (splitImages) => {
             if (roomInfo.hasLeft) {
                 const leftWall = document.createElement('img');
@@ -930,9 +984,9 @@ function renderRoomWallpapersForLayout(container) {
                 leftWall.className = 'layer-img wallpaper-layer';
                 leftWall.dataset.roomId = String(roomInfo.roomId);
                 leftWall.dataset.side = 'left-wall';
-                const lCoords = getRoomWallpaperAnchor(roomInfo.roomId, 'left-wall');
+                const lCoords = getWallpaperAnchorSafe(roomInfo.roomId, 'left-wall');
                 leftWall.style.transform = `translate(calc(-50% + ${lCoords.x}px), calc(-50% + ${lCoords.y}px))`;
-                leftWall.style.zIndex = lCoords.zIndex || 5;
+                leftWall.style.zIndex = lCoords.zIndex || 4;
                 container.appendChild(leftWall);
             }
 
@@ -942,30 +996,27 @@ function renderRoomWallpapersForLayout(container) {
                 rightWall.className = 'layer-img wallpaper-layer';
                 rightWall.dataset.roomId = String(roomInfo.roomId);
                 rightWall.dataset.side = 'right-wall';
-                const rCoords = getRoomWallpaperAnchor(roomInfo.roomId, 'right-wall');
+                const rCoords = getWallpaperAnchorSafe(roomInfo.roomId, 'right-wall');
                 rightWall.style.transform = `translate(calc(-50% + ${rCoords.x}px), calc(-50% + ${rCoords.y}px))`;
-                rightWall.style.zIndex = rCoords.zIndex || 5;
+                rightWall.style.zIndex = rCoords.zIndex || 4;
                 container.appendChild(rightWall);
             }
         });
     });
 }
 
-function renderDaycareStage() {
-    if (!furnitureStageLayers) return;
-    furnitureStageLayers.innerHTML = '';
-    if (!currentLayout) return;
-
-    renderRoomFlooringsForLayout(furnitureStageLayers);
-    renderRoomWallpapersForLayout(furnitureStageLayers);
+function renderPlacedFurnitureForLayout(container) {
+    if (!container) return;
 
     Object.keys(daycareState.furniture).forEach(key => {
         const placedItem = daycareState.furniture[key];
         if (!placedItem || !placedItem.name) return;
 
+        const isFloorTile = key.includes(',');
         const itemData = (typeof masterFurniture !== 'undefined')
-            ? (masterFurniture.floorItems.find(i => i.name === placedItem.name) ||
-                masterFurniture.wallItems.find(i => i.name === placedItem.name))
+            ? (isFloorTile
+                ? masterFurniture.floorItems.find(i => i.name === placedItem.name)
+                : masterFurniture.wallItems.find(i => i.name === placedItem.name))
             : null;
         if (!itemData || !itemData.images) return;
 
@@ -973,23 +1024,38 @@ function renderDaycareStage() {
         const rotIndex = placedItem.rotation || 0;
 
         img.src = itemData.images[rotIndex];
-        img.className = 'layer-img';
+        img.className = isFloorTile ? 'layer-img floor-furniture-layer' : 'layer-img wall-furniture-layer';
         img.alt = placedItem.name;
 
         let coords = { x: 0, y: 0 };
-        if (key.includes(',')) {
+        if (isFloorTile) {
             const [c, r] = key.split(',').map(Number);
             coords = getTileCoordinatesSafe(c, r);
         } else {
-            coords = getWallCoordinatesSafe(key);
+            coords = getWallFurnitureCoordinatesSafe(key);
         }
 
         img.style.transform = `translate(calc(-50% + ${coords.x}px), calc(-50% + ${coords.y}px))`;
-        img.style.zIndex = coords.zIndex || 20;
+        img.style.zIndex = coords.zIndex || (isFloorTile ? 20 : 15);
         img.style.display = 'block';
 
-        furnitureStageLayers.appendChild(img);
+        container.appendChild(img);
     });
+}
+
+function renderDaycareStage() {
+    if (!currentLayout) return;
+
+    const furnishingsTarget = furnishingsStageLayers || furnitureStageLayers;
+    if (furnishingsStageLayers) furnishingsStageLayers.innerHTML = '';
+    if (furnitureStageLayers) furnitureStageLayers.innerHTML = '';
+
+    // 1. Render base room furnishings (flooring & wallpapers)
+    renderRoomFlooringsForLayout(furnishingsTarget);
+    renderRoomWallpapersForLayout(furnishingsTarget);
+
+    // 2. Render placed furniture (floor items & wall items) on top
+    renderPlacedFurnitureForLayout(furnitureStageLayers);
 
     applyZoom();
 }
