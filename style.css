@@ -13,6 +13,7 @@ body {
     justify-content: center;
     padding: 20px;
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
 .app-container {
@@ -30,10 +31,14 @@ body {
 .top-nav {
     display: flex;
     justify-content: flex-end;
-    gap: 16px;
     padding: 12px 20px;
     background: #111214;
     border-bottom: 1px solid #3f4147;
+}
+
+.nav-links {
+    display: flex;
+    gap: 16px;
 }
 
 .nav-link {
@@ -49,20 +54,24 @@ body {
 }
 
 /* Workspace Layout (Sidebar + Stage) */
+#workspace-layout,
 .workspace-layout {
     display: flex;
     flex: 1;
+    min-height: 100vh;
+    width: 100%;
     overflow: hidden;
 }
 
 .sidebar {
-    width: 380px;
+    width: 360px;
+    max-width: 100%;
     background-color: #2b2d31;
     border-right: 1px solid #3f4147;
-    padding: 20px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
     overflow-y: auto;
     max-height: calc(100vh - 50px);
 }
@@ -84,25 +93,29 @@ body {
     color: #949ba4;
 }
 
-.control-group select {
+.control-group select,
+select {
     background-color: #1e1f22;
     border: 1px solid #3f4147;
     color: #f2f3f5;
-    padding: 10px;
+    padding: 8px 10px;
     border-radius: 8px;
     font-size: 14px;
     outline: none;
     cursor: pointer;
+    min-height: 40px;
+    touch-action: manipulation;
 }
 
-.control-group select:hover {
+.control-group select:hover,
+select:hover {
     border-color: #55575d;
 }
 
 /* Dynamic Room Selector Panel */
 .room-selector-panel {
     background-color: #2f3136;
-    padding: 15px;
+    padding: 14px;
     border-radius: 10px;
     color: #ffffff;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
@@ -116,17 +129,18 @@ body {
     color: #b5bac1;
 }
 
-.room-button-grid {
+.room-button-grid,
+.room-buttons-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
 }
 
 .room-btn {
     background-color: #2b2d31;
     border: 1px solid #3f4147;
     color: #b5bac1;
-    padding: 10px 8px;
+    padding: 8px 6px;
     border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
@@ -137,6 +151,8 @@ body {
     justify-content: center;
     gap: 6px;
     font-size: 12px;
+    min-height: 40px;
+    touch-action: manipulation;
 }
 
 .room-btn:hover {
@@ -152,15 +168,48 @@ body {
     box-shadow: 0 0 8px rgba(31, 139, 76, 0.4);
 }
 
-/* Main Content Wrapper / Canvas Viewport */
-.canvas-viewport {
+/* Room Actions Row */
+#roomActionsRow {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #3f4147;
+}
+
+#roomActionsRow button {
     flex: 1;
+    background-color: #2b2d31;
+    border: 1px solid #3f4147;
+    color: #b5bac1;
+    padding: 6px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 40px;
+    touch-action: manipulation;
+    transition: all 0.15s ease;
+}
+
+#roomActionsRow button:hover {
+    background-color: #da373c;
+    border-color: #f23f43;
+    color: #ffffff;
+}
+
+/* Main Content Wrapper / Canvas Viewport */
+.canvas-viewport,
+.stage-panel {
+    flex: 1;
+    position: relative;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     padding: 20px;
     background-color: #111214;
-    overflow-y: auto;
+    min-height: 360px;
+    overflow: hidden;
 }
 
 /* Stage Wrapper & Zoom Controls Toolbar */
@@ -170,7 +219,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 450px;
+    min-height: 420px;
 }
 
 .zoom-controls {
@@ -183,7 +232,7 @@ body {
     background: rgba(43, 45, 49, 0.9);
     padding: 4px;
     border-radius: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     border: 1px solid #3f4147;
 }
 
@@ -191,15 +240,17 @@ body {
     background: #2b2d31;
     border: 1px solid #3f4147;
     border-radius: 4px;
-    width: 28px;
+    min-width: 28px;
     height: 28px;
-    font-size: 14px;
+    padding: 0 8px;
+    font-size: 13px;
     font-weight: bold;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #dbdee1;
+    touch-action: manipulation;
     transition: background 0.15s;
 }
 
@@ -209,7 +260,8 @@ body {
 }
 
 /* Isometric Stage Viewport */
-.stage {
+.stage,
+.stage-viewport {
     position: relative;
     width: 100%;
     height: 500px;
@@ -253,9 +305,14 @@ body {
 }
 
 /* Workspaces & Cards */
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
 .section h2 {
     font-size: 16px;
-    margin-bottom: 12px;
     color: #f2f3f5;
 }
 
@@ -264,7 +321,6 @@ body {
     border: 1px solid #3f4147;
     border-radius: 8px;
     padding: 12px;
-    margin-bottom: 16px;
 }
 
 .workspace-header {
@@ -273,28 +329,43 @@ body {
     color: #949ba4;
     margin-bottom: 10px;
     letter-spacing: 0.5px;
+    border-bottom: 1px solid #3f4147;
+    padding-bottom: 4px;
 }
 
 .swap-label {
     font-size: 11px;
     font-weight: bold;
     color: #949ba4;
-    margin: 14px 0 6px 0;
+    margin: 12px 0 6px 0;
     letter-spacing: 0.5px;
     border-bottom: 1px solid #3f4147;
     padding-bottom: 4px;
 }
 
+#furnishings-slots-container,
+#dynamic-furniture-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 /* Search Row & Input Controls */
+.search-container,
 .select-row {
     position: relative;
     display: flex;
     align-items: center;
+    width: 100%;
     background: #1e1f22;
     border: 1px solid #3f4147;
     border-radius: 6px;
-    padding: 6px 10px;
+    padding: 4px 10px;
     gap: 8px;
+}
+
+.select-row:focus-within {
+    border-color: #5865f2;
 }
 
 .layer-badge {
@@ -310,17 +381,22 @@ body {
     border: 1px solid #3f4147;
 }
 
-.furnishing-search, .furniture-search {
+.furnishing-search,
+.furniture-search,
+input.furniture-search {
     flex: 1;
+    min-width: 0;
+    min-height: 40px;
     border: none;
     outline: none;
     font-size: 13px;
     background: transparent;
     color: #f2f3f5;
-    padding-right: 40px;
+    touch-action: manipulation;
 }
 
-.furnishing-search::placeholder, .furniture-search::placeholder {
+.furnishing-search::placeholder,
+.furniture-search::placeholder {
     color: #6d6f78;
 }
 
@@ -328,15 +404,18 @@ body {
 .clear-btn {
     background: transparent;
     border: none;
-    font-size: 15px;
+    font-size: 16px;
     color: #949ba4;
     cursor: pointer;
     display: none;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
     border-radius: 50%;
+    flex-shrink: 0;
+    touch-action: manipulation;
     transition: background 0.2s, color 0.2s;
 }
 
@@ -348,10 +427,12 @@ body {
 .rotation-group {
     display: flex;
     align-items: center;
+    gap: 4px;
 }
 
 /* Custom Dropdown Styling */
 .custom-dropdown {
+    display: none;
     position: absolute;
     top: 100%;
     left: 0;
@@ -360,10 +441,15 @@ body {
     border: 1px solid #3f4147;
     border-radius: 6px;
     margin-top: 4px;
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
-    z-index: 100;
+    z-index: 999;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.custom-dropdown.show,
+.custom-dropdown.open {
+    display: block;
 }
 
 .dropdown-item {
@@ -411,18 +497,26 @@ body {
         padding: 10px;
     }
 
+    #workspace-layout,
     .workspace-layout {
         flex-direction: column;
     }
 
     .sidebar {
         width: 100%;
-        max-height: none;
+        max-height: 55vh;
         border-right: none;
         border-bottom: 1px solid #3f4147;
     }
 
-    .canvas-viewport {
-        min-height: 400px;
+    .canvas-viewport,
+    .stage-panel {
+        width: 100%;
+        min-height: 45vh;
+    }
+
+    .stage,
+    .stage-viewport {
+        height: 360px;
     }
 }
