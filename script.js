@@ -4,11 +4,12 @@ let currentZoom = 1.0; // Default scale multiplier
 let activeRoomId = 1;
 
 const WALL_SLOTS_PER_HALF = 4; // 4 left (1-4) + 4 right (5-8); 12 per wallpaper half across a 3x3 layout
+const splitWallpaperCache = {};
 
 const daycareState = {
     furnishings: {
-        floor: {},
-        wall: {}
+        floor: {}, // Supports combined floor input and per-room flooring (floor[roomId])
+        wall: {}   // Supports combined wall input and per-room wallpaper (wall[roomId])
     },
     furniture: {}
 };
@@ -96,6 +97,67 @@ function getWallSlotsForRoom(layout, roomId) {
     return layoutConfig[roomId] || [];
 }
 
+function getRoomsWithWallSlots(layout) {
+    const totalRooms = getTotalRoomsForCurrentLayout();
+    const eligibleRooms = [];
+    for (let rId = 1; rId <= totalRooms; rId++) {
+        const slots = getWallSlotsForRoom(layout, rId);
+        if (slots.length > 0) {
+            eligibleRooms.push({
+                roomId: rId,
+                slots,
+                hasLeft: slots.some(s => s >= 1 && s <= 4),
+                hasRight: slots.some(s => s >= 5 && s <= 8)
+            });
+        }
+    }
+    return eligibleRooms;
+}
+
+function getFlooringNameForRoom(roomId) {
+    if (Object.prototype.hasOwnProperty.call(daycareState.furnishings.floor, roomId)) {
+        return daycareState.furnishings.floor[roomId];
+    }
+    return daycareState.furnishings.floor['combined'] || '';
+}
+
+function setFlooringNameForRoom(roomId, value) {
+    daycareState.furnishings.floor[roomId] = value;
+    if (!daycareState.furnishings.floor['combined'] && value) {
+        daycareState.furnishings.floor['combined'] = value;
+    }
+}
+
+function syncFloorInputForActiveRoom() {
+    const floorInput = document.getElementById('slot-floor');
+    if (!floorInput) return;
+    floorInput.value = getFlooringNameForRoom(activeRoomId);
+    floorInput.placeholder = `Search flooring for Room ${activeRoomId}...`;
+    onSearchInput(floorInput, 'floor-clear-btn');
+}
+
+function getWallpaperNameForRoom(roomId) {
+    if (Object.prototype.hasOwnProperty.call(daycareState.furnishings.wall, roomId)) {
+        return daycareState.furnishings.wall[roomId];
+    }
+    return daycareState.furnishings.wall['combined'] || '';
+}
+
+function setWallpaperNameForRoom(roomId, value) {
+    daycareState.furnishings.wall[roomId] = value;
+    if (!daycareState.furnishings.wall['combined'] && value) {
+        daycareState.furnishings.wall['combined'] = value;
+    }
+}
+
+function syncWallInputForActiveRoom() {
+    const wallInput = document.getElementById('slot-wall');
+    if (!wallInput) return;
+    wallInput.value = getWallpaperNameForRoom(activeRoomId);
+    wallInput.placeholder = `Search wallpaper for Room ${activeRoomId}...`;
+    onSearchInput(wallInput, 'wall-clear-btn');
+}
+
 // Utility: Toggle Clear Button
 function onSearchInput(inputElem, clearBtnId) {
     const clearBtn = document.getElementById(clearBtnId);
@@ -110,6 +172,11 @@ function clearSearch(inputId, clearBtnId) {
 
     inputElem.value = '';
     if (clearBtn) clearBtn.style.display = 'none';
+    if (inputId === 'slot-floor') {
+        daycareState.furnishings.floor[activeRoomId] = '';
+    } else if (inputId === 'slot-wall') {
+        daycareState.furnishings.wall[activeRoomId] = '';
+    }
     inputElem.dispatchEvent(new Event('input', { bubbles: true }));
     inputElem.focus();
 }
@@ -135,7 +202,7 @@ function applyZoom() {
     if (furnitureStageLayers) furnitureStageLayers.style.transform = scaleValue;
 }
 
-// --- 2. ROOM SELECTOR UI INTEGRATION ---
+// --- 2. ROOM SELECTOR UI & ROOM CLEAR ACTIONS ---
 function getTotalRoomsForCurrentLayout() {
     if (!currentLayout) return 1;
     if (currentLayout.cols === 4 && currentLayout.rows === 4) return 1;   // 1x1
@@ -150,6 +217,128 @@ function getTotalRoomsForCurrentLayout() {
 
 function getRoomsPerRow() {
     return Math.max(1, Math.ceil((currentLayout?.cols || 4) / 4));
+}
+
+function isKeyInRoom(key, targetRoomId) {
+    if (key.includes(',')) {
+        const [c, r] = key.split(',').map(Number);
+        if (Number.isNaN(c) || Number.isNaN(r)) return false;
+        return getRoomIdForTile(c, r) === targetRoomId;
+    }
+    const wallMatch = key.match(/^room(\d+)-wall-\d+$/i);
+    if (wallMatch) {
+        return parseInt(wallMatch[1], 10) === targetRoomId;
+    }
+    return false;
+}
+
+function clearActiveRoomFurniture(shouldRender = true) {
+    const roomToClear = activeRoomId;
+
+    Object.keys(daycareState.furniture).forEach(key => {
+        if (isKeyInRoom(key, roomToClear)) {
+            delete daycareState.furniture[key];
+        }
+    });
+
+    buildDynamicFurnitureSlots();
+    if (shouldRender) {
+        renderDaycareStage();
+    }
+}
+
+function clearActiveRoomFurnishings(shouldRender = true) {
+    const roomToClear = activeRoomId;
+    const prevFloor = daycareState.furnishings.floor[roomToClear];
+    const prevWall = daycareState.furnishings.wall[roomToClear];
+
+    daycareState.furnishings.floor[roomToClear] = '';
+    daycareState.furnishings.wall[roomToClear] = '';
+
+    if (prevFloor && daycareState.furnishings.floor['combined'] === prevFloor) {
+        daycareState.furnishings.floor['combined'] = '';
+    }
+    if (prevWall && daycareState.furnishings.wall['combined'] === prevWall) {
+        daycareState.furnishings.wall['combined'] = '';
+    }
+
+    syncFloorInputForActiveRoom();
+    syncWallInputForActiveRoom();
+
+    if (shouldRender) {
+        renderDaycareStage();
+    }
+}
+
+function clearAllActiveRoom() {
+    clearActiveRoomFurniture(false);
+    clearActiveRoomFurnishings(false);
+    renderDaycareStage();
+}
+
+function styleRoomActionButton(btn, borderColor, bgColor, textColor) {
+    btn.type = 'button';
+    btn.style.flex = '1 1 auto';
+    btn.style.minWidth = '100px';
+    btn.style.padding = '8px 10px';
+    btn.style.borderRadius = '6px';
+    btn.style.border = `1px solid ${borderColor}`;
+    btn.style.backgroundColor = bgColor;
+    btn.style.color = textColor;
+    btn.style.fontSize = '12px';
+    btn.style.fontWeight = '600';
+    btn.style.cursor = 'pointer';
+}
+
+function ensureRoomActionButtons() {
+    const panel = document.querySelector('.room-selector-panel');
+    if (!panel) return;
+
+    let actionsRow = document.getElementById('roomActionsRow');
+    if (!actionsRow) {
+        actionsRow = document.createElement('div');
+        actionsRow.id = 'roomActionsRow';
+        actionsRow.style.display = 'flex';
+        actionsRow.style.flexWrap = 'wrap';
+        actionsRow.style.gap = '6px';
+        actionsRow.style.marginTop = '10px';
+        panel.appendChild(actionsRow);
+    }
+
+    let clearFurnitureBtn = document.getElementById('clearFurnitureBtn');
+    if (!clearFurnitureBtn) {
+        clearFurnitureBtn = document.createElement('button');
+        clearFurnitureBtn.id = 'clearFurnitureBtn';
+        styleRoomActionButton(clearFurnitureBtn, '#5c4732', '#3a2f22', '#f2d5b8');
+        clearFurnitureBtn.onclick = () => clearActiveRoomFurniture(true);
+        actionsRow.appendChild(clearFurnitureBtn);
+    }
+
+    let clearFurnishingsBtn = document.getElementById('clearFurnishingsBtn');
+    if (!clearFurnishingsBtn) {
+        clearFurnishingsBtn = document.createElement('button');
+        clearFurnishingsBtn.id = 'clearFurnishingsBtn';
+        styleRoomActionButton(clearFurnishingsBtn, '#32485c', '#22313a', '#b8dcf2');
+        clearFurnishingsBtn.onclick = () => clearActiveRoomFurnishings(true);
+        actionsRow.appendChild(clearFurnishingsBtn);
+    }
+
+    let clearAllBtn = document.getElementById('clearAllRoomBtn');
+    if (!clearAllBtn) {
+        clearAllBtn = document.createElement('button');
+        clearAllBtn.id = 'clearAllRoomBtn';
+        styleRoomActionButton(clearAllBtn, '#5c3236', '#3a2225', '#f2b8bd');
+        clearAllBtn.onclick = clearAllActiveRoom;
+        actionsRow.appendChild(clearAllBtn);
+    }
+
+    // Remove legacy single button if present
+    const legacyBtn = document.getElementById('clearRoomBtn');
+    if (legacyBtn) legacyBtn.remove();
+
+    clearFurnitureBtn.textContent = `Clear Furniture (Rm ${activeRoomId})`;
+    clearFurnishingsBtn.textContent = `Clear Furnishings (Rm ${activeRoomId})`;
+    clearAllBtn.textContent = `Clear All (Rm ${activeRoomId})`;
 }
 
 function updateRoomSelectorUI() {
@@ -173,11 +362,16 @@ function updateRoomSelectorUI() {
             activeRoomId = i;
             document.querySelectorAll('.room-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            ensureRoomActionButtons();
+            syncFloorInputForActiveRoom();
+            syncWallInputForActiveRoom();
             buildDynamicFurnitureSlots();
         };
 
         gridContainer.appendChild(btn);
     }
+
+    ensureRoomActionButtons();
 }
 
 // --- 3. INITIALIZE DEFAULT LAYOUT & DROPDOWN ---
@@ -208,6 +402,8 @@ function initDefaultLayout() {
 
     activeRoomId = 1;
     updateRoomSelectorUI();
+    syncFloorInputForActiveRoom();
+    syncWallInputForActiveRoom();
     buildDynamicFurnitureSlots();
     renderDaycareStage();
 }
@@ -227,6 +423,8 @@ function switchLayout(index) {
     daycareState.furniture = {}; // Clear furniture on switch to prevent out-of-bound errors
 
     updateRoomSelectorUI();
+    syncFloorInputForActiveRoom();
+    syncWallInputForActiveRoom();
     buildDynamicFurnitureSlots();
     renderDaycareStage();
 }
@@ -287,6 +485,19 @@ function getTileCoordinatesSafe(c, r) {
     return { x: (c - r) * 32, y: (c + r) * 16, zIndex: 10 + c + r };
 }
 
+function getRoomFlooringAnchor(roomId) {
+    const roomsPerRow = getRoomsPerRow();
+    const roomIndex = Math.max(0, roomId - 1);
+    const roomCol = roomIndex % roomsPerRow;
+    const roomRow = Math.floor(roomIndex / roomsPerRow);
+    const centerTile = getTileCoordinatesSafe(roomCol * 4 + 1.5, roomRow * 4 + 1.5);
+    return {
+        x: centerTile.x || 0,
+        y: centerTile.y || 0,
+        zIndex: 2
+    };
+}
+
 function parseWallSlotKey(key) {
     // Format: "room<id>-wall-<slotNum>" (where 1-4 is left wall and 5-8 is right wall)
     const match = key.match(/^room(\d+)-wall-(\d+)$/i);
@@ -304,38 +515,71 @@ function parseWallSlotKey(key) {
     };
 }
 
-function getWallCoordinatesSafe(key) {
-    const { roomId, slotNumber, side, halfIndex } = parseWallSlotKey(key);
+function getRoomWallpaperAnchor(roomId, side) {
     const roomsPerRow = getRoomsPerRow();
     const roomIndex = Math.max(0, roomId - 1);
     const roomCol = roomIndex % roomsPerRow;
     const roomRow = Math.floor(roomIndex / roomsPerRow);
 
     if (currentLayout && typeof currentLayout.getWallCoordinates === 'function') {
-        const baseCoords = currentLayout.getWallCoordinates(side, halfIndex, roomId, slotNumber) || { x: 0, y: 0, zIndex: 5 };
+        const baseCoords = currentLayout.getWallCoordinates(side, 0, roomId, side === 'left-wall' ? 1 : 5) || { x: 0, y: 0, zIndex: 5 };
         if (side === 'left-wall') {
-            const offset = roomRow * WALL_SLOTS_PER_HALF + halfIndex;
             return {
-                x: (baseCoords.x || -60) - offset * 14,
-                y: (baseCoords.y || -40) + offset * 10,
+                x: (baseCoords.x || -60) - roomRow * WALL_SLOTS_PER_HALF * 14,
+                y: (baseCoords.y || -40) + roomRow * WALL_SLOTS_PER_HALF * 10,
                 zIndex: baseCoords.zIndex || 5
             };
         } else {
-            const offset = roomCol * WALL_SLOTS_PER_HALF + halfIndex;
             return {
-                x: (baseCoords.x || 60) + offset * 14,
-                y: (baseCoords.y || -40) + offset * 10,
+                x: (baseCoords.x || 60) + roomCol * WALL_SLOTS_PER_HALF * 14,
+                y: (baseCoords.y || -40) + roomCol * WALL_SLOTS_PER_HALF * 10,
                 zIndex: baseCoords.zIndex || 5
             };
         }
     }
 
     if (side === 'left-wall') {
-        const offset = roomRow * WALL_SLOTS_PER_HALF + halfIndex;
-        return { x: -60 - offset * 14, y: -40 + offset * 10, zIndex: 5 };
+        return {
+            x: -60 - roomRow * WALL_SLOTS_PER_HALF * 14,
+            y: -40 + roomRow * WALL_SLOTS_PER_HALF * 10,
+            zIndex: 5
+        };
     } else {
-        const offset = roomCol * WALL_SLOTS_PER_HALF + halfIndex;
-        return { x: 60 + offset * 14, y: -40 + offset * 10, zIndex: 5 };
+        return {
+            x: 60 + roomCol * WALL_SLOTS_PER_HALF * 14,
+            y: -40 + roomCol * WALL_SLOTS_PER_HALF * 10,
+            zIndex: 5
+        };
+    }
+}
+
+function getWallCoordinatesSafe(key) {
+    const { roomId, slotNumber, side, halfIndex } = parseWallSlotKey(key);
+    const anchor = getRoomWallpaperAnchor(roomId, side);
+
+    if (currentLayout && typeof currentLayout.getWallCoordinates === 'function') {
+        const slotCoords = currentLayout.getWallCoordinates(side, halfIndex, roomId, slotNumber);
+        if (slotCoords && typeof slotCoords.x === 'number' && typeof slotCoords.y === 'number') {
+            return {
+                x: slotCoords.x,
+                y: slotCoords.y,
+                zIndex: slotCoords.zIndex || anchor.zIndex || 5
+            };
+        }
+    }
+
+    if (side === 'left-wall') {
+        return {
+            x: anchor.x - halfIndex * 14,
+            y: anchor.y + halfIndex * 10,
+            zIndex: anchor.zIndex || 5
+        };
+    } else {
+        return {
+            x: anchor.x + halfIndex * 14,
+            y: anchor.y + halfIndex * 10,
+            zIndex: anchor.zIndex || 5
+        };
     }
 }
 
@@ -367,7 +611,7 @@ function buildDynamicFurnitureSlots() {
     if (wallSlots.length > 0) {
         const wallHeader = document.createElement('div');
         wallHeader.className = 'swap-label';
-        wallHeader.textContent = `ROOM ${activeRoomId} - WALL FURNITURE`;
+        wallHeader.textContent = `ROOM ${activeRoomId} - WALL FURNITURE & WALLPAPER`;
         container.appendChild(wallHeader);
 
         wallSlots.forEach(slotNum => {
@@ -563,7 +807,11 @@ function renderFurnitureDropdown(key, type, filter = '') {
     });
 
     input.addEventListener('input', (e) => {
-        daycareState.furnishings[furnishType]['combined'] = e.target.value;
+        if (furnishType === 'floor') {
+            setFlooringNameForRoom(activeRoomId, e.target.value);
+        } else {
+            setWallpaperNameForRoom(activeRoomId, e.target.value);
+        }
         onSearchInput(e.target, `${furnishType}-clear-btn`);
         renderFurnishingDropdown(furnishType, e.target.value);
         renderDaycareStage();
@@ -589,7 +837,11 @@ function renderFurnishingDropdown(type, filter = '') {
                 e.preventDefault();
                 const inputEl = document.getElementById(`slot-${type}`);
                 if (inputEl) inputEl.value = itemData.name;
-                daycareState.furnishings[type]['combined'] = itemData.name;
+                if (type === 'floor') {
+                    setFlooringNameForRoom(activeRoomId, itemData.name);
+                } else {
+                    setWallpaperNameForRoom(activeRoomId, itemData.name);
+                }
                 onSearchInput(inputEl, `${type}-clear-btn`);
                 hideAllDropdowns();
                 renderDaycareStage();
@@ -606,8 +858,13 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// --- 8. WALLPAPER SPLITTER & STAGE RENDERER ---
+// --- 8. FLOORING, WALLPAPER SPLITTER & PER-ROOM STAGE RENDERER ---
 function processCombinedWallpaper(imageSrc, callback) {
+    if (splitWallpaperCache[imageSrc]) {
+        callback(splitWallpaperCache[imageSrc]);
+        return;
+    }
+
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = imageSrc;
@@ -630,8 +887,71 @@ function processCombinedWallpaper(imageSrc, callback) {
         ctx.drawImage(img, halfWidth, 0, halfWidth, height, 0, 0, halfWidth, height);
         const rightHalf = canvas.toDataURL('image/png');
 
-        callback({ left: leftHalf, right: rightHalf });
+        const splitPair = { left: leftHalf, right: rightHalf };
+        splitWallpaperCache[imageSrc] = splitPair;
+        callback(splitPair);
     };
+}
+
+function renderRoomFlooringsForLayout(container) {
+    if (typeof masterFurnishings === 'undefined' || !Array.isArray(masterFurnishings.floor)) return;
+
+    const totalRooms = getTotalRoomsForCurrentLayout();
+    for (let roomId = 1; roomId <= totalRooms; roomId++) {
+        const flooringName = getFlooringNameForRoom(roomId);
+        if (!flooringName) continue;
+
+        const floorData = masterFurnishings.floor.find(i => i.name === flooringName);
+        if (!floorData || !floorData.image) continue;
+
+        const floorImg = document.createElement('img');
+        floorImg.src = floorData.image;
+        floorImg.className = 'layer-img flooring-layer';
+        floorImg.dataset.roomId = String(roomId);
+        const fCoords = getRoomFlooringAnchor(roomId);
+        floorImg.style.transform = `translate(calc(-50% + ${fCoords.x}px), calc(-50% + ${fCoords.y}px))`;
+        floorImg.style.zIndex = fCoords.zIndex || 2;
+        container.appendChild(floorImg);
+    }
+}
+
+function renderRoomWallpapersForLayout(container) {
+    if (typeof masterFurnishings === 'undefined' || !Array.isArray(masterFurnishings.wall)) return;
+
+    const eligibleRooms = getRoomsWithWallSlots(currentLayout);
+    eligibleRooms.forEach(roomInfo => {
+        const wallpaperName = getWallpaperNameForRoom(roomInfo.roomId);
+        if (!wallpaperName) return;
+
+        const wallpaperData = masterFurnishings.wall.find(i => i.name === wallpaperName);
+        if (!wallpaperData || !wallpaperData.image) return;
+
+        processCombinedWallpaper(wallpaperData.image, (splitImages) => {
+            if (roomInfo.hasLeft) {
+                const leftWall = document.createElement('img');
+                leftWall.src = splitImages.left;
+                leftWall.className = 'layer-img wallpaper-layer';
+                leftWall.dataset.roomId = String(roomInfo.roomId);
+                leftWall.dataset.side = 'left-wall';
+                const lCoords = getRoomWallpaperAnchor(roomInfo.roomId, 'left-wall');
+                leftWall.style.transform = `translate(calc(-50% + ${lCoords.x}px), calc(-50% + ${lCoords.y}px))`;
+                leftWall.style.zIndex = lCoords.zIndex || 5;
+                container.appendChild(leftWall);
+            }
+
+            if (roomInfo.hasRight) {
+                const rightWall = document.createElement('img');
+                rightWall.src = splitImages.right;
+                rightWall.className = 'layer-img wallpaper-layer';
+                rightWall.dataset.roomId = String(roomInfo.roomId);
+                rightWall.dataset.side = 'right-wall';
+                const rCoords = getRoomWallpaperAnchor(roomInfo.roomId, 'right-wall');
+                rightWall.style.transform = `translate(calc(-50% + ${rCoords.x}px), calc(-50% + ${rCoords.y}px))`;
+                rightWall.style.zIndex = rCoords.zIndex || 5;
+                container.appendChild(rightWall);
+            }
+        });
+    });
 }
 
 function renderDaycareStage() {
@@ -639,29 +959,9 @@ function renderDaycareStage() {
     furnitureStageLayers.innerHTML = '';
     if (!currentLayout) return;
 
-    const selectedWallpaperName = daycareState.furnishings.wall['combined'];
-    if (selectedWallpaperName && typeof masterFurnishings !== 'undefined') {
-        const wallpaperData = masterFurnishings.wall.find(i => i.name === selectedWallpaperName);
-        if (wallpaperData && wallpaperData.image) {
-            processCombinedWallpaper(wallpaperData.image, (splitImages) => {
-                const leftWall = document.createElement('img');
-                leftWall.src = splitImages.left;
-                leftWall.className = 'layer-img';
-                let lCoords = getWallCoordinatesSafe('room1-wall-1');
-                leftWall.style.transform = `translate(calc(-50% + ${lCoords.x}px), calc(-50% + ${lCoords.y}px))`;
-                leftWall.style.zIndex = lCoords.zIndex || 5;
-                furnitureStageLayers.appendChild(leftWall);
-
-                const rightWall = document.createElement('img');
-                rightWall.src = splitImages.right;
-                rightWall.className = 'layer-img';
-                let rCoords = getWallCoordinatesSafe('room1-wall-5');
-                rightWall.style.transform = `translate(calc(-50% + ${rCoords.x}px), calc(-50% + ${rCoords.y}px))`;
-                rightWall.style.zIndex = rCoords.zIndex || 5;
-                furnitureStageLayers.appendChild(rightWall);
-            });
-        }
-    }
+    // Render per-room flooring first, then per-room wallpaper on rooms with wall slots
+    renderRoomFlooringsForLayout(furnitureStageLayers);
+    renderRoomWallpapersForLayout(furnitureStageLayers);
 
     Object.keys(daycareState.furniture).forEach(key => {
         const placedItem = daycareState.furniture[key];
