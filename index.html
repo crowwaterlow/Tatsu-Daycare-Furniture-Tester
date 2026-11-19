@@ -18,6 +18,25 @@
         </header>
 
         <div id="workspace-layout" class="workspace-layout">
+            <!-- Stage / Canvas -->
+            <main class="stage-panel canvas-viewport">
+                <div class="stage-wrapper">
+                    <div class="zoom-controls" role="group" aria-label="Zoom controls">
+                        <button type="button" class="zoom-btn" onclick="adjustZoom(-0.1)" title="Zoom Out" aria-label="Zoom Out">&minus;</button>
+                        <button type="button" class="zoom-btn" onclick="resetZoom()" title="Reset Zoom" aria-label="Reset Zoom to 100%">100%</button>
+                        <button type="button" class="zoom-btn" onclick="adjustZoom(0.1)" title="Zoom In" aria-label="Zoom In">+</button>
+                    </div>
+
+                    <div id="stage" class="stage stage-viewport">
+                        <!-- Base Room Background -->
+                        <img id="room-layer" class="layer-img" alt="Daycare Layout" />
+                        <!-- Floor & Wallpaper Layers -->
+                        <div id="furnishings-stage-layers"></div>
+                        <!-- Floor & Wall Furniture Layers -->
+                        <div id="furniture-stage-layers"></div>
+                    </div>
+                </div>
+            </main>
             <!-- Sidebar / Controls -->
             <aside class="sidebar" aria-label="Daycare controls">
                 <h2>Daycare Designer</h2>
@@ -98,31 +117,10 @@
                         </div>
                     </div>
                 </section>
-            </aside>
-
-            <!-- Stage / Canvas -->
-            <main class="stage-panel canvas-viewport">
-                <div class="stage-wrapper">
-                    <div class="zoom-controls" role="group" aria-label="Zoom controls">
-                        <button type="button" class="zoom-btn" onclick="adjustZoom(-0.1)" title="Zoom Out" aria-label="Zoom Out">&minus;</button>
-                        <button type="button" class="zoom-btn" onclick="resetZoom()" title="Reset Zoom" aria-label="Reset Zoom to 100%">100%</button>
-                        <button type="button" class="zoom-btn" onclick="adjustZoom(0.1)" title="Zoom In" aria-label="Zoom In">+</button>
-                    </div>
-
-                    <div id="stage" class="stage stage-viewport">
-                        <!-- Base Room Background -->
-                        <img id="room-layer" class="layer-img" alt="Daycare Layout" />
-                        <!-- Floor & Wallpaper Layers -->
-                        <div id="furnishings-stage-layers"></div>
-                        <!-- Floor & Wall Furniture Layers -->
-                        <div id="furniture-stage-layers"></div>
-                    </div>
-                </div>
-
                 <footer class="footer-note">
                     Isometric Daycare Designer &bull; Layout switcher &amp; zoom controls
                 </footer>
-            </main>
+            </aside>
         </div>
     </div>
 
