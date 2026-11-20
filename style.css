@@ -351,6 +351,59 @@ select:hover {
     gap: 8px;
 }
 
+/* Furnishings Grid Buttons (Matches Slot Grid Buttons) */
+.furnishing-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.furnishing-btn,
+button.furnishing-btn {
+    position: relative;
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: #1e1f22;
+    border: 1px solid #3f4147;
+    color: #b5bac1;
+    padding: 7px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    min-height: 34px;
+    touch-action: manipulation;
+    transition: all 0.15s ease;
+}
+
+.furnishing-btn:hover,
+button.furnishing-btn:hover {
+    background-color: #35373c;
+    color: #ffffff;
+    border-color: #55575d;
+}
+
+.furnishing-btn.occupied::after,
+button.furnishing-btn.occupied::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #2ecc71;
+}
+
+.furnishing-btn.active,
+button.furnishing-btn.active {
+    background-color: #5865f2;
+    border-color: #7983f5;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(88, 101, 242, 0.4);
+}
+
 /* Slot Grid & Single Furniture Editor */
 .slot-buttons-grid {
     display: grid;
