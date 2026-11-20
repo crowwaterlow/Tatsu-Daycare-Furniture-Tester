@@ -237,7 +237,9 @@ function applyZoom() {
     const zoomCanvas = document.getElementById('zoom-canvas');
 
     if (zoomCanvas) {
-        zoomCanvas.style.zoom = String(currentZoom);
+        zoomCanvas.style.zoom = '';
+        zoomCanvas.style.transform = `scale(${currentZoom})`;
+        zoomCanvas.style.transformOrigin = 'top center';
     } else {
         const transformValue = `translate(-50%, -50%) scale(${currentZoom})`;
         if (roomLayer) roomLayer.style.transform = transformValue;
@@ -249,6 +251,9 @@ function applyZoom() {
         requestAnimationFrame(() => {
             const maxScrollLeft = Math.max(0, stageEl.scrollWidth - stageEl.clientWidth);
             stageEl.scrollLeft = maxScrollLeft / 2;
+            if (currentZoom > 1) {
+                stageEl.scrollTop = 0;
+            }
         });
     }
 }
