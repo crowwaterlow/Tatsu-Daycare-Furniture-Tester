@@ -1,5 +1,3 @@
-Remember this js
-
 // Global State for Daycare
 let currentLayout = null;
 let currentZoom = 1.0; // Default scale multiplier
