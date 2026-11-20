@@ -115,7 +115,7 @@ select:hover {
 /* Dynamic Room Selector Panel */
 .room-selector-panel {
     background-color: #2f3136;
-    padding: 14px;
+    padding: 8px 14px 14px 14px;
     border-radius: 10px;
     color: #ffffff;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
@@ -127,6 +127,10 @@ select:hover {
     font-size: 14px;
     font-weight: 600;
     color: #b5bac1;
+}
+
+.room-selector-panel .swap-label:first-child {
+    margin-top: 0;
 }
 
 .room-button-grid,
@@ -321,13 +325,14 @@ select:hover {
     background: #2f3136;
     border: 1px solid #3f4147;
     border-radius: 8px;
-    padding: 12px;
+    padding: 8px 12px 12px 12px;
 }
 
 .workspace-header {
     font-size: 12px;
     font-weight: bold;
     color: #949ba4;
+    margin-top: 0;
     margin-bottom: 10px;
     letter-spacing: 0.5px;
     border-bottom: 1px solid #3f4147;
@@ -601,18 +606,6 @@ input.furniture-search {
     color: #949ba4;
     text-align: center;
 }
-
-/* Hide ROOMS header spacing, ROOM FURNISHINGS header, and PLACEMENT SLOTS (FURNITURE) header */
-.room-selector-panel .swap-label,
-#workspace-furnishings .workspace-header,
-#workspace-furniture .workspace-header {
-    display: none;
-}
-
-.room-selector-panel {
-    padding-top: 10px;
-}
-
 
 /* Footer Note */
 .footer-note {
