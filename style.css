@@ -356,11 +356,11 @@ select:hover {
     gap: 8px;
 }
 
-/* Furnishings Grid Buttons (Matches Slot Grid Buttons) */
+/* Room Options Single-Line Grid */
 .furnishing-buttons-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 5px;
 }
 
 .furnishing-btn,
@@ -371,13 +371,14 @@ button.furnishing-btn {
     background-color: #1e1f22;
     border: 1px solid #3f4147;
     color: #b5bac1;
-    padding: 7px 8px;
+    padding: 6px 4px;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     cursor: pointer;
     text-align: center;
-    min-height: 34px;
+    min-height: 32px;
+    white-space: nowrap;
     touch-action: manipulation;
     transition: all 0.15s ease;
 }
@@ -394,9 +395,9 @@ button.furnishing-btn.occupied::after {
     content: "";
     position: absolute;
     top: 4px;
-    right: 5px;
-    width: 6px;
-    height: 6px;
+    right: 4px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background-color: #2ecc71;
 }
