@@ -2,7 +2,7 @@
 let currentLayout = null;
 let currentZoom = 1.0; // Default scale multiplier
 let activeRoomId = 1;
-let activeFurnishingType = null; // null | 'floor' | 'wall' | 'furniture'
+let activeFurnishingType = null; // null | 'furniture' | 'floor' | 'wall'
 let activeSlotKey = null;        // null | "c,r" | "room<id>-wall-<slotNum>"
 let activeSlotType = null;       // null | 'floor' | 'wall'
 let activeSlotLabel = '';
@@ -132,8 +132,8 @@ function setWallpaperNameForRoom(roomId, value) {
 }
 
 function getFurnishingLabel(type) {
-    if (type === 'wall') return 'Wallpaper';
     if (type === 'furniture') return 'Furniture';
+    if (type === 'wall') return 'Wallpaper';
     return 'Flooring';
 }
 
@@ -237,12 +237,12 @@ function syncFurnishingsUIForActiveRoom() {
     if (editorWrapper) editorWrapper.style.display = 'flex';
 
     if (!activeFurnishingType) {
-        if (badge) badge.textContent = 'Furnishing';
+        if (badge) badge.textContent = 'Option';
         if (input) {
             input.value = '';
             input.disabled = true;
             input.placeholder = currentLayout
-                ? 'Select Flooring, Wallpaper, or Furniture above...'
+                ? 'Select Furniture, Flooring, or Wallpaper above...'
                 : 'Select a layout first...';
         }
         syncFurnishingStatusAndButtons('');
@@ -288,7 +288,7 @@ function buildFurnishingsGridUI() {
     const grid = document.createElement('div');
     grid.className = 'furnishing-buttons-grid';
 
-    const types = hasWall ? ['floor', 'wall', 'furniture'] : ['floor', 'furniture'];
+    const types = hasWall ? ['furniture', 'floor', 'wall'] : ['furniture', 'floor'];
     types.forEach(type => {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -319,7 +319,7 @@ function buildFurnishingsGridUI() {
     const badge = document.createElement('span');
     badge.id = 'active-furnishing-badge';
     badge.className = 'layer-badge';
-    badge.textContent = activeFurnishingType ? getFurnishingLabel(activeFurnishingType) : 'Furnishing';
+    badge.textContent = activeFurnishingType ? getFurnishingLabel(activeFurnishingType) : 'Option';
 
     const input = document.createElement('input');
     input.type = 'text';
