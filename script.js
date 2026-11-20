@@ -889,7 +889,7 @@ function getAvailableSlotsForActiveRoom() {
         slots.push({
             key: `room${activeRoomId}-wall-${slotNum}`,
             type: 'wall',
-            shortLabel: `W${slotNum}`,
+            shortLabel: `${slotNum}`,
             fullLabel: `${sideText} Slot ${slotNum}`
         });
     });
