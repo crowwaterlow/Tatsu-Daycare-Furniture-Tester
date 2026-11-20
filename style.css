@@ -351,170 +351,69 @@ select:hover {
     gap: 8px;
 }
 
-/* Slot Trigger Buttons & Expandable Picker */
-.slot-row-wrapper {
-    display: flex;
-    flex-direction: column;
-}
-
-.slot-trigger-btn {
-    flex: 1;
-    min-width: 0;
-    min-height: 40px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #3f4147;
-    background-color: #2b2d31;
-    color: #dbdee1;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    text-align: left;
-    touch-action: manipulation;
-    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-}
-
-.slot-trigger-btn:hover {
-    background-color: #35373c;
-    border-color: #55575d;
-    color: #ffffff;
-}
-
-.slot-trigger-btn.has-value {
-    border-color: #4b5563;
-    color: #f2f3f5;
-    font-weight: 600;
-}
-
-.slot-trigger-btn.is-active {
-    background-color: #1f8b4c;
-    border-color: #2ecc71;
-    color: #ffffff;
-}
-
-.slot-trigger-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.slot-picker-panel {
-    width: 100%;
-    margin-top: 4px;
-    padding: 8px;
-    background-color: #232529;
-    border: 1px solid #3f4147;
-    border-radius: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.slot-picker-panel .search-container,
-.slot-picker-panel .select-row {
-    padding: 2px 8px;
-}
-
-.slot-picker-panel .custom-dropdown {
-    position: static;
-    margin-top: 2px;
-    max-height: 180px;
-}
-
-/* Room-Button Style Slot Grids */
+/* Slot Grid & Single Furniture Editor */
 .slot-buttons-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
 }
 
-.slot-tile-btn {
-    background-color: #2b2d31;
+.slot-grid-btn {
+    position: relative;
+    background-color: #1e1f22;
     border: 1px solid #3f4147;
     color: #b5bac1;
-    padding: 8px 6px;
+    padding: 7px 4px;
     border-radius: 6px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    font-size: 12px;
-    min-height: 44px;
+    min-height: 34px;
     touch-action: manipulation;
+    transition: all 0.15s ease;
 }
 
-.slot-tile-btn:hover {
+.slot-grid-btn:hover {
     background-color: #35373c;
-    color: #fff;
+    color: #ffffff;
     border-color: #55575d;
 }
 
-.slot-tile-btn.has-item {
-    border-color: #4f5d75;
-    color: #f2f3f5;
+.slot-grid-btn.occupied::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #2ecc71;
 }
 
-.slot-tile-btn.active {
-    background-color: #1f8b4c;
-    border-color: #2ecc71;
-    color: #fff;
-    box-shadow: 0 0 8px rgba(31, 139, 76, 0.4);
+.slot-grid-btn.active {
+    background-color: #5865f2;
+    border-color: #7983f5;
+    color: #ffffff;
+    box-shadow: 0 0 8px rgba(88, 101, 242, 0.4);
 }
 
-.slot-tile-sub {
-    font-size: 10px;
-    font-weight: 500;
-    opacity: 0.85;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Active Slot Controls Bar (Search, Rotate, Clear, Dropdown, Status) */
-.active-slot-bar {
+.single-furniture-editor {
     margin-top: 10px;
-    padding: 10px;
-    background-color: #232529;
-    border: 1px solid #3f4147;
-    border-radius: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #3f4147;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
-.active-slot-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #f2f3f5;
-}
-
-.active-slot-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.slot-current-status {
+.current-furniture-status {
     font-size: 12px;
     color: #949ba4;
-    line-height: 1.35;
+    padding: 2px 4px;
 }
 
-.slot-current-status strong {
+.current-furniture-status strong {
     color: #f2f3f5;
     font-weight: 600;
 }
