@@ -106,52 +106,23 @@ function roomHasWallpaper(layout, roomId) {
     return getWallSlotsForRoom(layout, roomId).length > 0;
 }
 
-function getRoomsWithWallSlots(layout) {
-    const totalRooms = getTotalRoomsForCurrentLayout();
-    const eligibleRooms = [];
-    for (let rId = 1; rId <= totalRooms; rId++) {
-        const slots = getWallSlotsForRoom(layout, rId);
-        if (slots.length > 0) {
-            eligibleRooms.push({
-                roomId: rId,
-                slots,
-                hasLeft: slots.some(s => s >= 1 && s <= 4),
-                hasRight: slots.some(s => s >= 5 && s <= 8)
-            });
-        }
-    }
-    return eligibleRooms;
-}
-
 // --- FURNISHINGS STATE HELPERS (FLOOR & WALLPAPER) ---
 function getFlooringNameForRoom(roomId) {
-    if (Object.prototype.hasOwnProperty.call(daycareState.furnishings.floor, roomId)) {
-        return daycareState.furnishings.floor[roomId];
-    }
-    return daycareState.furnishings.floor['combined'] || '';
+    return daycareState.furnishings.floor[roomId] || '';
 }
 
 function setFlooringNameForRoom(roomId, value) {
-    daycareState.furnishings.floor[roomId] = value;
-    if (!daycareState.furnishings.floor['combined'] && value) {
-        daycareState.furnishings.floor['combined'] = value;
-    }
+    daycareState.furnishings.floor[roomId] = value || '';
 }
 
 function getWallpaperNameForRoom(roomId) {
     if (!currentLayout || !roomHasWallpaper(currentLayout, roomId)) return '';
-    if (Object.prototype.hasOwnProperty.call(daycareState.furnishings.wall, roomId)) {
-        return daycareState.furnishings.wall[roomId];
-    }
-    return daycareState.furnishings.wall['combined'] || '';
+    return daycareState.furnishings.wall[roomId] || '';
 }
 
 function setWallpaperNameForRoom(roomId, value) {
     if (!currentLayout || !roomHasWallpaper(currentLayout, roomId)) return;
-    daycareState.furnishings.wall[roomId] = value;
-    if (!daycareState.furnishings.wall['combined'] && value) {
-        daycareState.furnishings.wall['combined'] = value;
-    }
+    daycareState.furnishings.wall[roomId] = value || '';
 }
 
 function getFurnishingLabel(type) {
@@ -461,19 +432,13 @@ function clearActiveRoomFurniture(shouldRender = true) {
 
 function clearActiveRoomFurnishings(shouldRender = true) {
     const roomToClear = activeRoomId;
-    const prevFloor = daycareState.furnishings.floor[roomToClear];
-    const prevWall = daycareState.furnishings.wall[roomToClear];
+
+    delete daycareState.furnishings.floor['combined'];
+    delete daycareState.furnishings.wall['combined'];
 
     daycareState.furnishings.floor[roomToClear] = '';
-    if (roomHasWallpaper(currentLayout, roomToClear)) {
+    if (currentLayout && roomHasWallpaper(currentLayout, roomToClear)) {
         daycareState.furnishings.wall[roomToClear] = '';
-    }
-
-    if (prevFloor && daycareState.furnishings.floor['combined'] === prevFloor) {
-        daycareState.furnishings.floor['combined'] = '';
-    }
-    if (prevWall && daycareState.furnishings.wall['combined'] === prevWall) {
-        daycareState.furnishings.wall['combined'] = '';
     }
 
     syncFloorInputForActiveRoom();
@@ -1291,55 +1256,61 @@ function renderRoomFlooringsForLayout(container) {
 function renderRoomWallpapersForLayout(container) {
     if (!container || typeof masterFurnishings === 'undefined' || !Array.isArray(masterFurnishings.wall)) return;
 
-    const eligibleRooms = getRoomsWithWallSlots(currentLayout);
-    eligibleRooms.forEach(roomInfo => {
-        const wallpaperName = getWallpaperNameForRoom(roomInfo.roomId);
-        if (!wallpaperName) return;
+    const totalRooms = getTotalRoomsForCurrentLayout();
+    for (let roomId = 1; roomId <= totalRooms; roomId++) {
+        const slots = getWallSlotsForRoom(currentLayout, roomId);
+        if (slots.length === 0) continue;
+
+        const wallpaperName = getWallpaperNameForRoom(roomId);
+        if (!wallpaperName) continue;
 
         const wallpaperData = masterFurnishings.wall.find(i => i.name === wallpaperName);
-        if (!wallpaperData || !wallpaperData.image) return;
+        if (!wallpaperData || !wallpaperData.image) continue;
+
+        const hasLeft = slots.some(s => s >= 1 && s <= 4);
+        const hasRight = slots.some(s => s >= 5 && s <= 8);
 
         // Render whole combined wallpaper when a room uses both left (1-4) and right (5-8) walls
-        if (roomInfo.hasLeft && roomInfo.hasRight) {
+        if (hasLeft && hasRight) {
             const wholeWall = document.createElement('img');
             wholeWall.src = wallpaperData.image;
             wholeWall.className = 'layer-img wallpaper-layer whole-wallpaper-layer';
-            wholeWall.dataset.roomId = String(roomInfo.roomId);
+            wholeWall.dataset.roomId = String(roomId);
             wholeWall.dataset.side = 'both-walls';
-            const cCoords = getCombinedWallpaperAnchorSafe(roomInfo.roomId);
+            const cCoords = getCombinedWallpaperAnchorSafe(roomId);
             wholeWall.style.transform = `translate(calc(-50% + ${cCoords.x}px), calc(-50% + ${cCoords.y}px))`;
             wholeWall.style.zIndex = cCoords.zIndex || 4;
             container.appendChild(wholeWall);
-            return;
+            continue;
         }
 
         // Otherwise split and paste only the needed half
         processCombinedWallpaper(wallpaperData.image, (splitImages) => {
-            if (roomInfo.hasLeft) {
+            if (hasLeft) {
                 const leftWall = document.createElement('img');
                 leftWall.src = splitImages.left;
                 leftWall.className = 'layer-img wallpaper-layer';
-                leftWall.dataset.roomId = String(roomInfo.roomId);
+                leftWall.dataset.roomId = String(roomId);
                 leftWall.dataset.side = 'left-wall';
-                const lCoords = getWallpaperAnchorSafe(roomInfo.roomId, 'left-wall');
+                const lCoords = getWallpaperAnchorSafe(roomId, 'left-wall');
                 leftWall.style.transform = `translate(calc(-50% + ${lCoords.x}px), calc(-50% + ${lCoords.y}px))`;
                 leftWall.style.zIndex = lCoords.zIndex || 4;
                 container.appendChild(leftWall);
             }
 
-            if (roomInfo.hasRight) {
+            if (hasRight) {
                 const rightWall = document.createElement('img');
                 rightWall.src = splitImages.right;
                 rightWall.className = 'layer-img wallpaper-layer';
-                rightWall.dataset.roomId = String(roomInfo.roomId);
+                rightWall.dataset.roomId = String(roomId);
                 rightWall.dataset.side = 'right-wall';
-                const rCoords = getWallpaperAnchorSafe(roomInfo.roomId, 'right-wall');
+                const rCoords = getWallpaperAnchorSafe(roomId, 'right-wall');
                 rightWall.style.transform = `translate(calc(-50% + ${rCoords.x}px), calc(-50% + ${rCoords.y}px))`;
                 rightWall.style.zIndex = rCoords.zIndex || 4;
                 container.appendChild(rightWall);
             }
         });
-    });
+    }
 }
 
 function renderPlacedFurnitureForLayout(container) {
