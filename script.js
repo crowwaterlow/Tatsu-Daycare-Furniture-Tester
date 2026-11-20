@@ -2,8 +2,9 @@
 let currentLayout = null;
 let currentZoom = 1.0; // Default scale multiplier
 let activeRoomId = 1;
-let activeSlotKey = null;
-let activeSlotType = 'floor'; // 'floor' or 'wall'
+let activeFurnishingType = null; // null | 'floor' | 'wall'
+let activeSlotKey = null;        // null | "c,r" | "room<id>-wall-<slotNum>"
+let activeSlotType = null;       // null | 'floor' | 'wall'
 let activeSlotLabel = '';
 
 const WALL_SLOTS_PER_HALF = 4; // 4 left (1-4) + 4 right (5-8); 12 per wallpaper half across a 3x3 layout
@@ -137,16 +138,8 @@ function setFlooringNameForRoom(roomId, value) {
     }
 }
 
-function syncFloorInputForActiveRoom() {
-    const floorInput = document.getElementById('slot-floor');
-    if (!floorInput) return;
-    floorInput.value = getFlooringNameForRoom(activeRoomId);
-    floorInput.placeholder = `Search flooring for Room ${activeRoomId}...`;
-    onSearchInput(floorInput, 'floor-clear-btn');
-}
-
 function getWallpaperNameForRoom(roomId) {
-    if (!roomHasWallpaper(currentLayout, roomId)) return '';
+    if (!currentLayout || !roomHasWallpaper(currentLayout, roomId)) return '';
     if (Object.prototype.hasOwnProperty.call(daycareState.furnishings.wall, roomId)) {
         return daycareState.furnishings.wall[roomId];
     }
@@ -154,44 +147,207 @@ function getWallpaperNameForRoom(roomId) {
 }
 
 function setWallpaperNameForRoom(roomId, value) {
-    if (!roomHasWallpaper(currentLayout, roomId)) return;
+    if (!currentLayout || !roomHasWallpaper(currentLayout, roomId)) return;
     daycareState.furnishings.wall[roomId] = value;
     if (!daycareState.furnishings.wall['combined'] && value) {
         daycareState.furnishings.wall['combined'] = value;
     }
 }
 
-function syncWallInputForActiveRoom() {
-    const wallInput = document.getElementById('slot-wall');
-    const clearBtn = document.getElementById('wall-clear-btn');
-    const dropdown = document.getElementById('dropdown-wall');
-    if (!wallInput) return;
+function getFurnishingLabel(type) {
+    return type === 'wall' ? 'Wallpaper' : 'Flooring';
+}
 
-    const hasWall = roomHasWallpaper(currentLayout, activeRoomId);
-    const wallRow = wallInput.closest('.layer-row');
+function getFurnishingValueForRoom(type, roomId) {
+    if (type === 'wall') {
+        return getWallpaperNameForRoom(roomId);
+    }
+    return getFlooringNameForRoom(roomId);
+}
 
-    if (!hasWall) {
-        wallInput.value = '';
-        wallInput.disabled = true;
+function setFurnishingValueForRoom(type, roomId, value) {
+    if (type === 'wall') {
+        setWallpaperNameForRoom(roomId, value);
+    } else {
+        setFlooringNameForRoom(roomId, value);
+    }
+}
+
+function syncFurnishingStatusAndButtons(currentValue = '') {
+    const clearBtn = document.getElementById('active-furnishing-clear-btn');
+    const statusText = document.getElementById('current-furnishing-display');
+
+    document.querySelectorAll('.furnishing-btn').forEach(btn => {
+        const type = btn.dataset.furnishType;
+        const hasValue = Boolean((currentLayout ? getFurnishingValueForRoom(type, activeRoomId) : '').trim());
+        btn.classList.toggle('active', activeFurnishingType === type);
+        btn.classList.toggle('occupied', hasValue);
+    });
+
+    if (!activeFurnishingType) {
         if (clearBtn) clearBtn.style.display = 'none';
-        if (dropdown) {
-            dropdown.style.display = 'none';
-            dropdown.classList.remove('show', 'open');
-        }
-        if (wallRow) {
-            wallRow.style.display = 'none';
-        }
+        if (statusText) statusText.innerHTML = 'Current Furnishing: <strong>None</strong>';
         return;
     }
 
-    wallInput.disabled = false;
-    if (wallRow) {
-        wallRow.style.display = '';
+    const label = getFurnishingLabel(activeFurnishingType);
+    const trimmed = (currentValue || '').trim();
+
+    if (clearBtn) {
+        clearBtn.style.display = trimmed.length > 0 ? 'flex' : 'none';
+    }
+    if (statusText) {
+        statusText.innerHTML = `Current ${label}: <strong>${trimmed || 'None'}</strong>`;
+    }
+}
+
+function syncFurnishingsUIForActiveRoom() {
+    const container = document.getElementById('furnishings-slots-container');
+    const hasWall = currentLayout ? roomHasWallpaper(currentLayout, activeRoomId) : false;
+    const existingWallBtn = container ? container.querySelector('[data-furnish-type="wall"]') : null;
+
+    if (!container || (hasWall && !existingWallBtn) || (!hasWall && existingWallBtn)) {
+        buildFurnishingsGridUI();
+        return;
     }
 
-    wallInput.value = getWallpaperNameForRoom(activeRoomId);
-    wallInput.placeholder = `Search wallpaper for Room ${activeRoomId}...`;
-    onSearchInput(wallInput, 'wall-clear-btn');
+    const badge = document.getElementById('active-furnishing-badge');
+    const input = document.getElementById('active-furnishing-search');
+
+    if (!activeFurnishingType) {
+        if (badge) badge.textContent = 'Furnishing';
+        if (input) {
+            input.value = '';
+            input.disabled = true;
+            input.placeholder = currentLayout
+                ? 'Select Flooring or Wallpaper above...'
+                : 'Select a layout first...';
+        }
+        syncFurnishingStatusAndButtons('');
+        return;
+    }
+
+    const label = getFurnishingLabel(activeFurnishingType);
+    const savedValue = currentLayout ? getFurnishingValueForRoom(activeFurnishingType, activeRoomId) : '';
+
+    if (badge) badge.textContent = label;
+    if (input) {
+        input.disabled = false;
+        input.value = savedValue;
+        input.placeholder = currentLayout
+            ? `Search ${label.toLowerCase()} for Room ${activeRoomId}...`
+            : `Select a layout to search ${label.toLowerCase()}...`;
+    }
+
+    syncFurnishingStatusAndButtons(savedValue);
+}
+
+function syncFloorInputForActiveRoom() {
+    syncFurnishingsUIForActiveRoom();
+}
+
+function syncWallInputForActiveRoom() {
+    syncFurnishingsUIForActiveRoom();
+}
+
+function buildFurnishingsGridUI() {
+    const container = document.getElementById('furnishings-slots-container');
+    if (!container) return;
+
+    const hasWall = currentLayout ? roomHasWallpaper(currentLayout, activeRoomId) : false;
+    if (!hasWall && activeFurnishingType === 'wall') {
+        activeFurnishingType = null;
+    }
+
+    container.innerHTML = '';
+
+    const grid = document.createElement('div');
+    grid.className = 'furnishing-buttons-grid';
+
+    const types = hasWall ? ['floor', 'wall'] : ['floor'];
+    types.forEach(type => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `furnishing-btn ${activeFurnishingType === type ? 'active' : ''}`;
+        btn.dataset.furnishType = type;
+        btn.textContent = getFurnishingLabel(type);
+
+        btn.onclick = () => {
+            activeFurnishingType = type;
+            hideAllDropdowns();
+            syncFurnishingsUIForActiveRoom();
+        };
+
+        grid.appendChild(btn);
+    });
+
+    container.appendChild(grid);
+
+    const editorWrapper = document.createElement('div');
+    editorWrapper.className = 'single-furniture-editor';
+
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'select-row layer-row search-container';
+
+    const badge = document.createElement('span');
+    badge.id = 'active-furnishing-badge';
+    badge.className = 'layer-badge';
+    badge.textContent = activeFurnishingType ? getFurnishingLabel(activeFurnishingType) : 'Furnishing';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'active-furnishing-search';
+    input.className = 'furnishing-search';
+    input.autocomplete = 'off';
+
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.id = 'active-furnishing-clear-btn';
+    clearBtn.className = 'clear-btn';
+    clearBtn.innerHTML = '&times;';
+    clearBtn.title = 'Clear Furnishing';
+    clearBtn.onclick = () => {
+        if (!currentLayout || !activeFurnishingType) return;
+        setFurnishingValueForRoom(activeFurnishingType, activeRoomId, '');
+        syncFurnishingsUIForActiveRoom();
+        renderDaycareStage();
+        input.focus();
+    };
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'custom-dropdown';
+    dropdown.id = 'dropdown-active-furnishing';
+
+    input.addEventListener('focus', () => {
+        if (!currentLayout || !activeFurnishingType) return;
+        hideAllDropdowns();
+        renderFurnishingDropdown(input.value);
+    });
+
+    input.addEventListener('input', (e) => {
+        if (!currentLayout || !activeFurnishingType) return;
+        const val = e.target.value;
+        setFurnishingValueForRoom(activeFurnishingType, activeRoomId, val);
+        syncFurnishingStatusAndButtons(val);
+        renderFurnishingDropdown(val);
+        renderDaycareStage();
+    });
+
+    rowDiv.appendChild(badge);
+    rowDiv.appendChild(input);
+    rowDiv.appendChild(clearBtn);
+    rowDiv.appendChild(dropdown);
+
+    const statusLine = document.createElement('div');
+    statusLine.id = 'current-furnishing-display';
+    statusLine.className = 'current-furniture-status';
+    statusLine.innerHTML = 'Current Furnishing: <strong>None</strong>';
+
+    editorWrapper.appendChild(rowDiv);
+    editorWrapper.appendChild(statusLine);
+    container.appendChild(editorWrapper);
+
+    syncFurnishingsUIForActiveRoom();
 }
 
 // Utility: Toggle Clear Button
@@ -208,11 +364,10 @@ function clearSearch(inputId, clearBtnId) {
 
     inputElem.value = '';
     if (clearBtn) clearBtn.style.display = 'none';
-    if (inputId === 'slot-floor') {
-        daycareState.furnishings.floor[activeRoomId] = '';
-    } else if (inputId === 'slot-wall') {
-        daycareState.furnishings.wall[activeRoomId] = '';
+    if (currentLayout && activeFurnishingType) {
+        setFurnishingValueForRoom(activeFurnishingType, activeRoomId, '');
     }
+    syncFurnishingStatusAndButtons('');
     inputElem.dispatchEvent(new Event('input', { bubbles: true }));
     inputElem.focus();
 }
@@ -428,6 +583,10 @@ function initDefaultLayout() {
 
     currentLayout = null;
     activeRoomId = 1;
+    activeFurnishingType = null;
+    activeSlotKey = null;
+    activeSlotType = null;
+    activeSlotLabel = '';
 
     if (layoutSelect) {
         layoutSelect.innerHTML = '';
@@ -481,6 +640,10 @@ function switchLayout(index) {
     }
 
     activeRoomId = 1;
+    activeFurnishingType = null;
+    activeSlotKey = null;
+    activeSlotType = null;
+    activeSlotLabel = '';
     daycareState.furniture = {};
 
     updateRoomSelectorUI();
@@ -750,13 +913,32 @@ function updateActiveSlotControls() {
 
     if (!input || !statusText) return;
 
-    const placed = activeSlotKey ? daycareState.furniture[activeSlotKey] : null;
+    document.querySelectorAll('.slot-grid-btn').forEach(btn => {
+        const key = btn.dataset.slotKey;
+        const hasItem = Boolean(daycareState.furniture[key]?.name?.trim());
+        btn.classList.toggle('active', Boolean(activeSlotKey) && key === activeSlotKey);
+        btn.classList.toggle('occupied', hasItem);
+    });
+
+    if (!activeSlotKey) {
+        if (badge) badge.textContent = 'Slot';
+        input.value = '';
+        input.disabled = true;
+        input.placeholder = 'Select a slot above to search furniture...';
+        if (rotGroup) rotGroup.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+        statusText.innerHTML = 'Current Furniture: <strong>None</strong>';
+        return;
+    }
+
+    const placed = daycareState.furniture[activeSlotKey];
     const placedName = (placed && placed.name && placed.name.trim()) ? placed.name.trim() : '';
 
     if (badge) {
         badge.textContent = activeSlotLabel || 'Slot';
     }
 
+    input.disabled = false;
     input.placeholder = `Search ${activeSlotType === 'wall' ? 'wall' : 'floor'} item for ${activeSlotLabel}...`;
     input.value = placedName;
 
@@ -768,13 +950,6 @@ function updateActiveSlotControls() {
     }
 
     statusText.innerHTML = `Current Furniture: <strong>${placedName || 'None'}</strong>`;
-
-    document.querySelectorAll('.slot-grid-btn').forEach(btn => {
-        const key = btn.dataset.slotKey;
-        const hasItem = Boolean(daycareState.furniture[key]?.name?.trim());
-        btn.classList.toggle('active', key === activeSlotKey);
-        btn.classList.toggle('occupied', hasItem);
-    });
 }
 
 function createSlotGridButton(slot) {
@@ -803,20 +978,30 @@ function buildDynamicFurnitureSlots() {
 
     if (!currentLayout) {
         activeSlotKey = null;
+        activeSlotType = null;
+        activeSlotLabel = '';
         return;
     }
 
     const roomSlots = getAvailableSlotsForActiveRoom();
     if (roomSlots.length === 0) {
         activeSlotKey = null;
+        activeSlotType = null;
+        activeSlotLabel = '';
         return;
     }
 
-    const existingMatch = roomSlots.find(s => s.key === activeSlotKey);
-    const selectedSlot = existingMatch || roomSlots[0];
-    activeSlotKey = selectedSlot.key;
-    activeSlotType = selectedSlot.type;
-    activeSlotLabel = selectedSlot.shortLabel;
+    // Preserve active slot only if it still exists in the active room; otherwise keep none active
+    const existingMatch = activeSlotKey ? roomSlots.find(s => s.key === activeSlotKey) : null;
+    if (existingMatch) {
+        activeSlotKey = existingMatch.key;
+        activeSlotType = existingMatch.type;
+        activeSlotLabel = existingMatch.shortLabel;
+    } else {
+        activeSlotKey = null;
+        activeSlotType = null;
+        activeSlotLabel = '';
+    }
 
     // 1. Floor Slots Grid
     const floorSlots = roomSlots.filter(s => s.type === 'floor');
@@ -861,7 +1046,7 @@ function buildDynamicFurnitureSlots() {
     const badge = document.createElement('span');
     badge.id = 'active-slot-badge';
     badge.className = 'layer-badge';
-    badge.textContent = activeSlotLabel;
+    badge.textContent = activeSlotLabel || 'Slot';
 
     const input = document.createElement('input');
     input.type = 'text';
@@ -912,6 +1097,7 @@ function buildDynamicFurnitureSlots() {
     dropdown.id = 'dropdown-active-furniture';
 
     input.addEventListener('focus', () => {
+        if (!activeSlotKey) return;
         hideAllDropdowns();
         renderFurnitureDropdown(input.value);
     });
@@ -985,41 +1171,20 @@ function renderFurnitureDropdown(filter = '') {
     dropdown.classList.add('show');
 }
 
-['floor', 'wall'].forEach(furnishType => {
-    const input = document.getElementById(`slot-${furnishType}`);
-    if (!input) return;
+function renderFurnishingDropdown(filter = '') {
+    if (!currentLayout || !activeFurnishingType) return;
+    if (activeFurnishingType === 'wall' && !roomHasWallpaper(currentLayout, activeRoomId)) return;
 
-    input.addEventListener('focus', () => {
-        if (furnishType === 'wall' && !roomHasWallpaper(currentLayout, activeRoomId)) return;
-        hideAllDropdowns();
-        renderFurnishingDropdown(furnishType, input.value);
-    });
-
-    input.addEventListener('input', (e) => {
-        if (furnishType === 'wall' && !roomHasWallpaper(currentLayout, activeRoomId)) return;
-        if (furnishType === 'floor') {
-            setFlooringNameForRoom(activeRoomId, e.target.value);
-        } else {
-            setWallpaperNameForRoom(activeRoomId, e.target.value);
-        }
-        onSearchInput(e.target, `${furnishType}-clear-btn`);
-        renderFurnishingDropdown(furnishType, e.target.value);
-        renderDaycareStage();
-    });
-});
-
-function renderFurnishingDropdown(type, filter = '') {
-    if (type === 'wall' && !roomHasWallpaper(currentLayout, activeRoomId)) return;
-
-    const dropdown = document.getElementById(`dropdown-${type}`);
+    const dropdown = document.getElementById('dropdown-active-furnishing');
     if (!dropdown) return;
     dropdown.innerHTML = '';
+
     const query = filter.toLowerCase().trim();
-    const list = (typeof masterFurnishings !== 'undefined') ? (masterFurnishings[type] || []) : [];
+    const list = (typeof masterFurnishings !== 'undefined') ? (masterFurnishings[activeFurnishingType] || []) : [];
     const filtered = list.filter(item => item.name.toLowerCase().includes(query));
 
     if (filtered.length === 0) {
-        dropdown.innerHTML = `<div class="dropdown-no-results">No matching ${type === 'wall' ? 'wallpapers' : 'floors'}</div>`;
+        dropdown.innerHTML = `<div class="dropdown-no-results">No matching ${activeFurnishingType === 'wall' ? 'wallpapers' : 'floorings'}</div>`;
     } else {
         filtered.forEach(itemData => {
             const div = document.createElement('div');
@@ -1027,20 +1192,17 @@ function renderFurnishingDropdown(type, filter = '') {
             div.innerHTML = `<img src="${itemData.image}" alt=""><span>${itemData.name}</span>`;
             div.addEventListener('mousedown', (e) => {
                 e.preventDefault();
-                const inputEl = document.getElementById(`slot-${type}`);
+                setFurnishingValueForRoom(activeFurnishingType, activeRoomId, itemData.name);
+                const inputEl = document.getElementById('active-furnishing-search');
                 if (inputEl) inputEl.value = itemData.name;
-                if (type === 'floor') {
-                    setFlooringNameForRoom(activeRoomId, itemData.name);
-                } else {
-                    setWallpaperNameForRoom(activeRoomId, itemData.name);
-                }
-                onSearchInput(inputEl, `${type}-clear-btn`);
+                syncFurnishingStatusAndButtons(itemData.name);
                 hideAllDropdowns();
                 renderDaycareStage();
             });
             dropdown.appendChild(div);
         });
     }
+
     dropdown.style.display = 'block';
     dropdown.classList.add('show');
 }
