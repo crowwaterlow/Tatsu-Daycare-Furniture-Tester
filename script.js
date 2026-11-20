@@ -73,6 +73,17 @@ const roomLayer = document.getElementById('room-layer');
 const furnishingsStageLayers = document.getElementById('furnishings-stage-layers');
 const furnitureStageLayers = document.getElementById('furniture-stage-layers');
 
+function syncLayoutDependentVisibility() {
+    const hasLayout = Boolean(currentLayout);
+    const roomPanel = document.querySelector('.room-selector-panel');
+    const optionsWorkspace = document.getElementById('workspace-furnishings');
+    const furnitureWorkspace = document.getElementById('workspace-furniture');
+
+    if (roomPanel) roomPanel.style.display = hasLayout ? '' : 'none';
+    if (optionsWorkspace) optionsWorkspace.style.display = hasLayout ? '' : 'none';
+    if (furnitureWorkspace) furnitureWorkspace.style.display = hasLayout ? '' : 'none';
+}
+
 function getAvailableLayouts() {
     if (typeof masterLayouts !== 'undefined' && Array.isArray(masterLayouts) && masterLayouts.length > 0) {
         return masterLayouts;
@@ -644,6 +655,7 @@ function initDefaultLayout() {
     if (furnishingsStageLayers) furnishingsStageLayers.innerHTML = '';
     if (furnitureStageLayers) furnitureStageLayers.innerHTML = '';
 
+    syncLayoutDependentVisibility();
     updateRoomSelectorUI();
     syncFloorInputForActiveRoom();
     syncWallInputForActiveRoom();
@@ -670,6 +682,7 @@ function switchLayout(index) {
     activeSlotLabel = '';
     daycareState.furniture = {};
 
+    syncLayoutDependentVisibility();
     updateRoomSelectorUI();
     syncFloorInputForActiveRoom();
     syncWallInputForActiveRoom();
