@@ -1,3 +1,5 @@
+Remember this js
+
 // Global State for Daycare
 let currentLayout = null;
 let currentZoom = 1.0; // Default scale multiplier
@@ -233,29 +235,10 @@ function resetZoom() {
 }
 
 function applyZoom() {
-    const stageEl = document.getElementById('stage');
-    const zoomCanvas = document.getElementById('zoom-canvas');
-
-    if (zoomCanvas) {
-        zoomCanvas.style.zoom = '';
-        zoomCanvas.style.transform = `scale(${currentZoom})`;
-        zoomCanvas.style.transformOrigin = 'top center';
-    } else {
-        const transformValue = `translate(-50%, -50%) scale(${currentZoom})`;
-        if (roomLayer) roomLayer.style.transform = transformValue;
-        if (furnishingsStageLayers) furnishingsStageLayers.style.transform = transformValue;
-        if (furnitureStageLayers) furnitureStageLayers.style.transform = transformValue;
-    }
-
-    if (stageEl && zoomCanvas) {
-        requestAnimationFrame(() => {
-            const maxScrollLeft = Math.max(0, stageEl.scrollWidth - stageEl.clientWidth);
-            stageEl.scrollLeft = maxScrollLeft / 2;
-            if (currentZoom > 1) {
-                stageEl.scrollTop = 0;
-            }
-        });
-    }
+    const transformValue = `translate(-50%, -50%) scale(${currentZoom})`;
+    if (roomLayer) roomLayer.style.transform = transformValue;
+    if (furnishingsStageLayers) furnishingsStageLayers.style.transform = transformValue;
+    if (furnitureStageLayers) furnitureStageLayers.style.transform = transformValue;
 }
 
 // --- 2. ROOM SELECTOR UI & ROOM CLEAR ACTIONS ---
