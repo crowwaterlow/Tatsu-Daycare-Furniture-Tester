@@ -264,9 +264,7 @@ select:hover {
     min-height: 500px;
     background: #1e1f22;
     border-radius: 8px;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
+    display: block;
     overflow: auto;
     border: 1px solid #3f4147;
     -webkit-overflow-scrolling: touch;
@@ -275,12 +273,14 @@ select:hover {
 
 .zoom-canvas {
     position: relative;
-    display: inline-flex;
-    align-items: center;
+    width: max-content;
+    min-width: 100%;
+    min-height: 100%;
+    display: flex;
+    align-items: flex-start;
     justify-content: center;
-    margin: auto;
-    padding: 48px;
-    flex-shrink: 0;
+    padding: 36px;
+    transform-origin: top center;
 }
 
 #room-layer {
