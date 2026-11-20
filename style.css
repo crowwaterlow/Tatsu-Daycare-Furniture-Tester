@@ -602,6 +602,18 @@ input.furniture-search {
     text-align: center;
 }
 
+/* Hide ROOMS header spacing, ROOM FURNISHINGS header, and PLACEMENT SLOTS (FURNITURE) header */
+.room-selector-panel .swap-label,
+#workspace-furnishings .workspace-header,
+#workspace-furniture .workspace-header {
+    display: none;
+}
+
+.room-selector-panel {
+    padding-top: 10px;
+}
+
+
 /* Footer Note */
 .footer-note {
     text-align: center;
