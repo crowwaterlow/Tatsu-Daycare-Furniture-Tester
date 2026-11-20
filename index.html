@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tatsu Daycare Furniture Tester</title>
+    <title>Isometric Daycare Designer</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -51,7 +51,7 @@
                 <div class="room-selector-panel">
                     <div class="swap-label">ROOMS</div>
                     <div id="roomButtonsGrid" class="room-buttons-grid" role="group" aria-label="Room selection"></div>
-                    <!-- script.js populates #roomActionsRow here for Clear Furniture / Clear Furnishings / Clear All -->
+                    <!-- script.js populates #roomActionsRow here for Clear Furniture / Clear Furnishings / Clear All / Clear Entire Daycare -->
                 </div>
 
                 <!-- Customization Workspaces -->
@@ -63,46 +63,72 @@
                         </div>
 
                         <div id="furnishings-slots-container">
-                            <div class="select-row layer-row search-container">
-                                <label for="slot-floor" class="layer-badge">Floor</label>
-                                <input
-                                    id="slot-floor"
-                                    class="furnishing-search"
-                                    type="text"
-                                    autocomplete="off"
-                                    placeholder="Search flooring..."
-                                    aria-autocomplete="list"
-                                    aria-controls="dropdown-floor"
-                                />
-                                <button
-                                    id="floor-clear-btn"
-                                    class="clear-btn"
-                                    type="button"
-                                    aria-label="Clear floor search"
-                                    onclick="clearSearch('slot-floor', 'floor-clear-btn')"
-                                >&times;</button>
-                                <div id="dropdown-floor" class="custom-dropdown" role="listbox"></div>
+                            <div class="slot-row-wrapper">
+                                <div class="select-row layer-row search-container">
+                                    <label for="slot-btn-floor" class="layer-badge">Floor</label>
+                                    <button
+                                        type="button"
+                                        id="slot-btn-floor"
+                                        class="slot-trigger-btn"
+                                        onclick="toggleFurnishingSlotPicker('floor')"
+                                    ></button>
+                                </div>
+                                <div id="picker-floor" class="slot-picker-panel" style="display: none;">
+                                    <div class="select-row layer-row search-container">
+                                        <input
+                                            id="slot-floor"
+                                            class="furnishing-search"
+                                            type="text"
+                                            autocomplete="off"
+                                            placeholder="Search flooring..."
+                                            aria-autocomplete="list"
+                                            aria-controls="dropdown-floor"
+                                        />
+                                        <button
+                                            id="floor-clear-btn"
+                                            class="clear-btn"
+                                            type="button"
+                                            aria-label="Clear floor search"
+                                            onclick="clearSearch('slot-floor', 'floor-clear-btn')"
+                                        >&times;</button>
+                                    </div>
+                                    <div id="dropdown-floor" class="custom-dropdown" role="listbox"></div>
+                                    <div id="status-floor" class="slot-current-status">Current Floor: <strong>None</strong></div>
+                                </div>
                             </div>
 
-                            <div class="select-row layer-row search-container">
-                                <label for="slot-wall" class="layer-badge">Wallpaper</label>
-                                <input
-                                    id="slot-wall"
-                                    class="furnishing-search"
-                                    type="text"
-                                    autocomplete="off"
-                                    placeholder="Search wallpaper..."
-                                    aria-autocomplete="list"
-                                    aria-controls="dropdown-wall"
-                                />
-                                <button
-                                    id="wall-clear-btn"
-                                    class="clear-btn"
-                                    type="button"
-                                    aria-label="Clear wallpaper search"
-                                    onclick="clearSearch('slot-wall', 'wall-clear-btn')"
-                                >&times;</button>
-                                <div id="dropdown-wall" class="custom-dropdown" role="listbox"></div>
+                            <div class="slot-row-wrapper">
+                                <div class="select-row layer-row search-container">
+                                    <label for="slot-btn-wall" class="layer-badge">Wallpaper</label>
+                                    <button
+                                        type="button"
+                                        id="slot-btn-wall"
+                                        class="slot-trigger-btn"
+                                        onclick="toggleFurnishingSlotPicker('wall')"
+                                    ></button>
+                                </div>
+                                <div id="picker-wall" class="slot-picker-panel" style="display: none;">
+                                    <div class="select-row layer-row search-container">
+                                        <input
+                                            id="slot-wall"
+                                            class="furnishing-search"
+                                            type="text"
+                                            autocomplete="off"
+                                            placeholder="Search wallpaper..."
+                                            aria-autocomplete="list"
+                                            aria-controls="dropdown-wall"
+                                        />
+                                        <button
+                                            id="wall-clear-btn"
+                                            class="clear-btn"
+                                            type="button"
+                                            aria-label="Clear wallpaper search"
+                                            onclick="clearSearch('slot-wall', 'wall-clear-btn')"
+                                        >&times;</button>
+                                    </div>
+                                    <div id="dropdown-wall" class="custom-dropdown" role="listbox"></div>
+                                    <div id="status-wall" class="slot-current-status">Current Wallpaper: <strong>None</strong></div>
+                                </div>
                             </div>
                         </div>
                     </div>
