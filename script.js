@@ -233,10 +233,27 @@ function resetZoom() {
 }
 
 function applyZoom() {
-    const transformValue = `translate(-50%, -50%) scale(${currentZoom})`;
-    if (roomLayer) roomLayer.style.transform = transformValue;
-    if (furnishingsStageLayers) furnishingsStageLayers.style.transform = transformValue;
-    if (furnitureStageLayers) furnitureStageLayers.style.transform = transformValue;
+    const stageEl = document.getElementById('stage');
+    const zoomCanvas = document.getElementById('zoom-canvas');
+
+    if (zoomCanvas) {
+        // Scaling layout dimensions via zoom ensures scrollbars cover top & edges cleanly
+        zoomCanvas.style.zoom = String(currentZoom);
+    } else {
+        const transformValue = `translate(-50%, -50%) scale(${currentZoom})`;
+        if (roomLayer) roomLayer.style.transform = transformValue;
+        if (furnishingsStageLayers) furnishingsStageLayers.style.transform = transformValue;
+        if (furnitureStageLayers) furnitureStageLayers.style.transform = transformValue;
+    }
+
+    if (stageEl && zoomCanvas) {
+        requestAnimationFrame(() => {
+            const maxScrollLeft = Math.max(0, stageEl.scrollWidth - stageEl.clientWidth);
+            const maxScrollTop = Math.max(0, stageEl.scrollHeight - stageEl.clientHeight);
+            stageEl.scrollLeft = maxScrollLeft / 2;
+            stageEl.scrollTop = Math.min(maxScrollTop / 2, stageEl.scrollTop);
+        });
+    }
 }
 
 // --- 2. ROOM SELECTOR UI & ROOM CLEAR ACTIONS ---
