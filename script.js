@@ -2,7 +2,7 @@
 let currentLayout = null;
 let currentZoom = 1.0; // Default scale multiplier
 let activeRoomId = 1;
-let activeFurnishingType = null; // null | 'floor' | 'wall'
+let activeFurnishingType = null; // null | 'floor' | 'wall' | 'furniture'
 let activeSlotKey = null;        // null | "c,r" | "room<id>-wall-<slotNum>"
 let activeSlotType = null;       // null | 'floor' | 'wall'
 let activeSlotLabel = '';
@@ -106,6 +106,12 @@ function roomHasWallpaper(layout, roomId) {
     return getWallSlotsForRoom(layout, roomId).length > 0;
 }
 
+function roomHasAnyFurniture(roomId) {
+    return Object.keys(daycareState.furniture).some(
+        key => isKeyInRoom(key, roomId) && Boolean(daycareState.furniture[key]?.name?.trim())
+    );
+}
+
 // --- FURNISHINGS STATE HELPERS (FLOOR & WALLPAPER) ---
 function getFlooringNameForRoom(roomId) {
     return daycareState.furnishings.floor[roomId] || '';
@@ -126,20 +132,25 @@ function setWallpaperNameForRoom(roomId, value) {
 }
 
 function getFurnishingLabel(type) {
-    return type === 'wall' ? 'Wallpaper' : 'Flooring';
+    if (type === 'wall') return 'Wallpaper';
+    if (type === 'furniture') return 'Furniture';
+    return 'Flooring';
 }
 
 function getFurnishingValueForRoom(type, roomId) {
     if (type === 'wall') {
         return getWallpaperNameForRoom(roomId);
     }
-    return getFlooringNameForRoom(roomId);
+    if (type === 'floor') {
+        return getFlooringNameForRoom(roomId);
+    }
+    return '';
 }
 
 function setFurnishingValueForRoom(type, roomId, value) {
     if (type === 'wall') {
         setWallpaperNameForRoom(roomId, value);
-    } else {
+    } else if (type === 'floor') {
         setFlooringNameForRoom(roomId, value);
     }
 }
@@ -157,18 +168,33 @@ function purgeLegacyFurnishingRows() {
     });
 }
 
+function syncFurnitureSlotsVisibility() {
+    const dynamicSlotsContainer = document.getElementById('dynamic-furniture-slots');
+    if (!dynamicSlotsContainer) return;
+
+    const shouldShow = Boolean(currentLayout) && activeFurnishingType === 'furniture';
+    dynamicSlotsContainer.style.display = shouldShow ? 'flex' : 'none';
+}
+
 function syncFurnishingStatusAndButtons(currentValue = '') {
     const clearBtn = document.getElementById('active-furnishing-clear-btn');
     const statusText = document.getElementById('current-furnishing-display');
 
     document.querySelectorAll('.furnishing-btn').forEach(btn => {
         const type = btn.dataset.furnishType;
-        const hasValue = Boolean((currentLayout ? getFurnishingValueForRoom(type, activeRoomId) : '').trim());
+        let hasValue = false;
+        if (currentLayout) {
+            if (type === 'furniture') {
+                hasValue = roomHasAnyFurniture(activeRoomId);
+            } else {
+                hasValue = Boolean(getFurnishingValueForRoom(type, activeRoomId).trim());
+            }
+        }
         btn.classList.toggle('active', activeFurnishingType === type);
         btn.classList.toggle('occupied', hasValue);
     });
 
-    if (!activeFurnishingType) {
+    if (!activeFurnishingType || activeFurnishingType === 'furniture') {
         if (clearBtn) clearBtn.style.display = 'none';
         if (statusText) statusText.innerHTML = 'Current Furnishing: <strong>None</strong>';
         return;
@@ -187,6 +213,7 @@ function syncFurnishingStatusAndButtons(currentValue = '') {
 
 function syncFurnishingsUIForActiveRoom() {
     purgeLegacyFurnishingRows();
+    syncFurnitureSlotsVisibility();
 
     const container = document.getElementById('furnishings-slots-container');
     const hasWall = currentLayout ? roomHasWallpaper(currentLayout, activeRoomId) : false;
@@ -197,8 +224,17 @@ function syncFurnishingsUIForActiveRoom() {
         return;
     }
 
+    const editorWrapper = container.querySelector('.single-furniture-editor');
     const badge = document.getElementById('active-furnishing-badge');
     const input = document.getElementById('active-furnishing-search');
+
+    if (activeFurnishingType === 'furniture') {
+        if (editorWrapper) editorWrapper.style.display = 'none';
+        syncFurnishingStatusAndButtons('');
+        return;
+    }
+
+    if (editorWrapper) editorWrapper.style.display = 'flex';
 
     if (!activeFurnishingType) {
         if (badge) badge.textContent = 'Furnishing';
@@ -206,7 +242,7 @@ function syncFurnishingsUIForActiveRoom() {
             input.value = '';
             input.disabled = true;
             input.placeholder = currentLayout
-                ? 'Select Flooring or Wallpaper above...'
+                ? 'Select Flooring, Wallpaper, or Furniture above...'
                 : 'Select a layout first...';
         }
         syncFurnishingStatusAndButtons('');
@@ -252,7 +288,7 @@ function buildFurnishingsGridUI() {
     const grid = document.createElement('div');
     grid.className = 'furnishing-buttons-grid';
 
-    const types = hasWall ? ['floor', 'wall'] : ['floor'];
+    const types = hasWall ? ['floor', 'wall', 'furniture'] : ['floor', 'furniture'];
     types.forEach(type => {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -264,6 +300,9 @@ function buildFurnishingsGridUI() {
             activeFurnishingType = type;
             hideAllDropdowns();
             syncFurnishingsUIForActiveRoom();
+            if (type === 'furniture') {
+                buildDynamicFurnitureSlots();
+            }
         };
 
         grid.appendChild(btn);
@@ -295,7 +334,7 @@ function buildFurnishingsGridUI() {
     clearBtn.innerHTML = '&times;';
     clearBtn.title = 'Clear Furnishing';
     clearBtn.onclick = () => {
-        if (!currentLayout || !activeFurnishingType) return;
+        if (!currentLayout || !activeFurnishingType || activeFurnishingType === 'furniture') return;
         setFurnishingValueForRoom(activeFurnishingType, activeRoomId, '');
         syncFurnishingsUIForActiveRoom();
         renderDaycareStage();
@@ -307,13 +346,13 @@ function buildFurnishingsGridUI() {
     dropdown.id = 'dropdown-active-furnishing';
 
     input.addEventListener('focus', () => {
-        if (!currentLayout || !activeFurnishingType) return;
+        if (!currentLayout || !activeFurnishingType || activeFurnishingType === 'furniture') return;
         hideAllDropdowns();
         renderFurnishingDropdown(input.value);
     });
 
     input.addEventListener('input', (e) => {
-        if (!currentLayout || !activeFurnishingType) return;
+        if (!currentLayout || !activeFurnishingType || activeFurnishingType === 'furniture') return;
         const val = e.target.value;
         setFurnishingValueForRoom(activeFurnishingType, activeRoomId, val);
         syncFurnishingStatusAndButtons(val);
@@ -352,7 +391,7 @@ function clearSearch(inputId, clearBtnId) {
 
     inputElem.value = '';
     if (clearBtn) clearBtn.style.display = 'none';
-    if (currentLayout && activeFurnishingType) {
+    if (currentLayout && activeFurnishingType && activeFurnishingType !== 'furniture') {
         setFurnishingValueForRoom(activeFurnishingType, activeRoomId, '');
     }
     syncFurnishingStatusAndButtons('');
@@ -425,6 +464,7 @@ function clearActiveRoomFurniture(shouldRender = true) {
     });
 
     buildDynamicFurnitureSlots();
+    syncFurnishingStatusAndButtons();
     if (shouldRender) {
         renderDaycareStage();
     }
@@ -904,6 +944,8 @@ function updateActiveSlotControls() {
         btn.classList.toggle('occupied', hasItem);
     });
 
+    syncFurnishingStatusAndButtons();
+
     if (!activeSlotKey) {
         if (badge) badge.textContent = 'Slot';
         input.value = '';
@@ -959,6 +1001,7 @@ function buildDynamicFurnitureSlots() {
     const container = document.getElementById('dynamic-furniture-slots');
     if (!container) return;
     container.innerHTML = '';
+    syncFurnitureSlotsVisibility();
 
     if (!currentLayout) {
         activeSlotKey = null;
@@ -1155,7 +1198,7 @@ function renderFurnitureDropdown(filter = '') {
 }
 
 function renderFurnishingDropdown(filter = '') {
-    if (!currentLayout || !activeFurnishingType) return;
+    if (!currentLayout || !activeFurnishingType || activeFurnishingType === 'furniture') return;
     if (activeFurnishingType === 'wall' && !roomHasWallpaper(currentLayout, activeRoomId)) return;
 
     const dropdown = document.getElementById('dropdown-active-furnishing');
