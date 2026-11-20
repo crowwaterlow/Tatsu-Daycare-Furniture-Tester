@@ -77,11 +77,10 @@ function syncLayoutDependentVisibility() {
     const hasLayout = Boolean(currentLayout);
     const roomPanel = document.querySelector('.room-selector-panel');
     const optionsWorkspace = document.getElementById('workspace-furnishings');
-    const furnitureWorkspace = document.getElementById('workspace-furniture');
 
     if (roomPanel) roomPanel.style.display = hasLayout ? '' : 'none';
     if (optionsWorkspace) optionsWorkspace.style.display = hasLayout ? '' : 'none';
-    if (furnitureWorkspace) furnitureWorkspace.style.display = hasLayout ? '' : 'none';
+    syncFurnitureSlotsVisibility();
 }
 
 function getAvailableLayouts() {
@@ -180,11 +179,16 @@ function purgeLegacyFurnishingRows() {
 }
 
 function syncFurnitureSlotsVisibility() {
+    const furnitureWorkspace = document.getElementById('workspace-furniture');
     const dynamicSlotsContainer = document.getElementById('dynamic-furniture-slots');
-    if (!dynamicSlotsContainer) return;
-
     const shouldShow = Boolean(currentLayout) && activeFurnishingType === 'furniture';
-    dynamicSlotsContainer.style.display = shouldShow ? 'flex' : 'none';
+
+    if (furnitureWorkspace) {
+        furnitureWorkspace.style.display = shouldShow ? '' : 'none';
+    }
+    if (dynamicSlotsContainer) {
+        dynamicSlotsContainer.style.display = shouldShow ? 'flex' : 'none';
+    }
 }
 
 function syncFurnishingStatusAndButtons(currentValue = '') {
@@ -239,37 +243,24 @@ function syncFurnishingsUIForActiveRoom() {
     const badge = document.getElementById('active-furnishing-badge');
     const input = document.getElementById('active-furnishing-search');
 
-    if (activeFurnishingType === 'furniture') {
-        if (editorWrapper) editorWrapper.style.display = 'none';
-        syncFurnishingStatusAndButtons('');
-        return;
+    const showFurnishingSearch = Boolean(currentLayout) && (activeFurnishingType === 'floor' || activeFurnishingType === 'wall');
+    if (editorWrapper) {
+        editorWrapper.style.display = showFurnishingSearch ? 'flex' : 'none';
     }
 
-    if (editorWrapper) editorWrapper.style.display = 'flex';
-
-    if (!activeFurnishingType) {
-        if (badge) badge.textContent = 'Option';
-        if (input) {
-            input.value = '';
-            input.disabled = true;
-            input.placeholder = currentLayout
-                ? 'Select Furniture, Flooring, or Wallpaper above...'
-                : 'Select a layout first...';
-        }
+    if (!showFurnishingSearch) {
         syncFurnishingStatusAndButtons('');
         return;
     }
 
     const label = getFurnishingLabel(activeFurnishingType);
-    const savedValue = currentLayout ? getFurnishingValueForRoom(activeFurnishingType, activeRoomId) : '';
+    const savedValue = getFurnishingValueForRoom(activeFurnishingType, activeRoomId);
 
     if (badge) badge.textContent = label;
     if (input) {
         input.disabled = false;
         input.value = savedValue;
-        input.placeholder = currentLayout
-            ? `Search ${label.toLowerCase()} for Room ${activeRoomId}...`
-            : `Select a layout to search ${label.toLowerCase()}...`;
+        input.placeholder = `Search ${label.toLowerCase()} for Room ${activeRoomId}...`;
     }
 
     syncFurnishingStatusAndButtons(savedValue);
@@ -323,6 +314,7 @@ function buildFurnishingsGridUI() {
 
     const editorWrapper = document.createElement('div');
     editorWrapper.className = 'single-furniture-editor';
+    editorWrapper.style.display = 'none';
 
     const rowDiv = document.createElement('div');
     rowDiv.className = 'select-row layer-row search-container';
