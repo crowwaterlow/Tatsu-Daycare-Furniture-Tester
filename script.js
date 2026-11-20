@@ -315,6 +315,17 @@ function clearAllActiveRoom() {
     renderDaycareStage();
 }
 
+function clearEntireDaycare() {
+    daycareState.furniture = {};
+    daycareState.furnishings.floor = {};
+    daycareState.furnishings.wall = {};
+
+    syncFloorInputForActiveRoom();
+    syncWallInputForActiveRoom();
+    buildDynamicFurnitureSlots();
+    renderDaycareStage();
+}
+
 function styleRoomActionButton(btn, borderColor, bgColor, textColor) {
     btn.type = 'button';
     btn.style.flex = '1 1 auto';
@@ -371,12 +382,23 @@ function ensureRoomActionButtons() {
         actionsRow.appendChild(clearAllBtn);
     }
 
+    let clearEntireDaycareBtn = document.getElementById('clearEntireDaycareBtn');
+    if (!clearEntireDaycareBtn) {
+        clearEntireDaycareBtn = document.createElement('button');
+        clearEntireDaycareBtn.id = 'clearEntireDaycareBtn';
+        styleRoomActionButton(clearEntireDaycareBtn, '#7a2e35', '#4a1c20', '#ffccd0');
+        clearEntireDaycareBtn.style.flexBasis = '100%';
+        clearEntireDaycareBtn.onclick = clearEntireDaycare;
+        actionsRow.appendChild(clearEntireDaycareBtn);
+    }
+
     const legacyBtn = document.getElementById('clearRoomBtn');
     if (legacyBtn) legacyBtn.remove();
 
     clearFurnitureBtn.textContent = `Clear Furniture (Rm ${activeRoomId})`;
     clearFurnishingsBtn.textContent = `Clear Furnishings (Rm ${activeRoomId})`;
     clearAllBtn.textContent = `Clear All (Rm ${activeRoomId})`;
+    clearEntireDaycareBtn.textContent = 'Clear Entire Daycare';
 }
 
 function updateRoomSelectorUI() {
