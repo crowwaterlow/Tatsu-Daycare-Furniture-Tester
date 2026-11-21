@@ -244,6 +244,83 @@ function getSlotPlacementOffset(slotKey) {
     );
 }
 
+// --- 2-SLOT FURNITURE & TILE OCCUPANCY HELPERS ---
+function findMasterFurnitureItem(itemName, slotType = null) {
+    if (!itemName || typeof masterFurniture === 'undefined') return null;
+    const normalized = itemName.trim().toLowerCase();
+    if (!normalized) return null;
+
+    if (slotType === 'floor') {
+        return (masterFurniture.floorItems || []).find(i => i.name.toLowerCase() === normalized) || null;
+    }
+    if (slotType === 'wall') {
+        return (masterFurniture.wallItems || []).find(i => i.name.toLowerCase() === normalized) || null;
+    }
+
+    return (
+        (masterFurniture.floorItems || []).find(i => i.name.toLowerCase() === normalized) ||
+        (masterFurniture.wallItems || []).find(i => i.name.toLowerCase() === normalized) ||
+        null
+    );
+}
+
+function getSecondaryTileKey(col, row, rotation = 0) {
+    if (rotation === 0) return `${col + 1},${row}`;
+    if (rotation === 1) return `${col},${row + 1}`;
+    if (rotation === 2) return `${col - 1},${row}`;
+    if (rotation === 3) return `${col},${row - 1}`;
+    return `${col + 1},${row}`;
+}
+
+function getShortFloorLabelForTile(c, r) {
+    const rawLabel = (currentLayout && typeof currentLayout.getCustomSlotLabel === 'function')
+        ? currentLayout.getCustomSlotLabel(c, r)
+        : getFallbackSlotLabel(c, r);
+    return rawLabel.replace(/^Room\s+\d+\s*[-:]?\s*/i, '') || getFallbackSlotLabel(c, r);
+}
+
+// Returns a map of secondary tile keys ("c,r") -> { anchorKey, anchorLabel, itemName }
+// blocked by 2-slot floor furniture placed on adjacent anchor tiles.
+function getBlockedFloorTilesMap() {
+    const blocked = {};
+    if (!currentLayout) return blocked;
+
+    Object.keys(daycareState.furniture).forEach(key => {
+        if (!key.includes(',')) return;
+        const placed = daycareState.furniture[key];
+        if (!placed || !placed.name || !placed.name.trim()) return;
+
+        const itemData = findMasterFurnitureItem(placed.name, 'floor');
+        if (!itemData || !itemData.is2Slot) return;
+
+        const [c, r] = key.split(',').map(Number);
+        if (Number.isNaN(c) || Number.isNaN(r)) return;
+
+        const rot = placed.rotation || 0;
+        const secondaryKey = getSecondaryTileKey(c, r, rot);
+        blocked[secondaryKey] = {
+            anchorKey: key,
+            anchorLabel: getShortFloorLabelForTile(c, r),
+            itemName: placed.name.trim()
+        };
+    });
+
+    return blocked;
+}
+
+function isTileDirectlyOccupied(tileKey, ignoreAnchorKey = null) {
+    if (tileKey === ignoreAnchorKey) return false;
+    return Boolean(daycareState.furniture[tileKey]?.name?.trim());
+}
+
+function isTileBlockedBy2Slot(tileKey, ignoreAnchorKey = null) {
+    const blockedMap = getBlockedFloorTilesMap();
+    const blocker = blockedMap[tileKey];
+    if (!blocker) return false;
+    if (ignoreAnchorKey && blocker.anchorKey === ignoreAnchorKey) return false;
+    return true;
+}
+
 function getWallSlotsForRoom(layout, roomId) {
     const layoutKey = getLayoutKey(layout);
     const layoutConfig = WALL_SLOT_MAP[layoutKey];
@@ -821,30 +898,41 @@ function switchLayout(index) {
     renderDaycareStage();
 }
 
-// --- 5. ROTATION BOUNDARY VALIDATION ---
-function canRotateSafely(col, row, itemData, rotation) {
+// --- 5. ROTATION & PLACEMENT BOUNDARY / COLLISION VALIDATION ---
+function canPlaceOrRotate2Slot(col, row, itemData, rotation) {
+    if (!currentLayout) return false;
+    const anchorKey = `${col},${row}`;
+
+    // Anchor tile cannot be blocked by another 2-slot item
+    if (isTileBlockedBy2Slot(anchorKey, anchorKey)) return false;
+
     if (!itemData || !itemData.is2Slot) return true;
 
-    const affectedTiles = [`${col},${row}`];
-
-    if (rotation === 0) affectedTiles.push(`${col + 1},${row}`);
-    else if (rotation === 1) affectedTiles.push(`${col},${row + 1}`);
-    else if (rotation === 2) affectedTiles.push(`${col - 1},${row}`);
-    else if (rotation === 3) affectedTiles.push(`${col},${row - 1}`);
+    const secondaryKey = getSecondaryTileKey(col, row, rotation);
+    const [secCol, secRow] = secondaryKey.split(',').map(Number);
 
     const roomMinCol = Math.floor(col / 4) * 4;
     const roomMaxCol = roomMinCol + 3;
     const roomMinRow = Math.floor(row / 4) * 4;
     const roomMaxRow = roomMinRow + 3;
 
-    for (const tileKey of affectedTiles) {
-        const [c, r] = tileKey.split(',').map(Number);
-        if (c < 0 || c >= currentLayout.cols || r < 0 || r >= currentLayout.rows) return false;
-        if (c < roomMinCol || c > roomMaxCol || r < roomMinRow || r > roomMaxRow) {
-            return false;
-        }
+    // 1. Must stay inside layout & current 4x4 room boundaries
+    if (secCol < 0 || secCol >= currentLayout.cols || secRow < 0 || secRow >= currentLayout.rows) {
+        return false;
     }
+    if (secCol < roomMinCol || secCol > roomMaxCol || secRow < roomMinRow || secRow > roomMaxRow) {
+        return false;
+    }
+
+    // 2. Secondary tile cannot already have another furniture item or be covered by another 2-slot item
+    if (isTileDirectlyOccupied(secondaryKey, anchorKey)) return false;
+    if (isTileBlockedBy2Slot(secondaryKey, anchorKey)) return false;
+
     return true;
+}
+
+function canRotateSafely(col, row, itemData, rotation) {
+    return canPlaceOrRotate2Slot(col, row, itemData, rotation);
 }
 
 // Helper: Resolve Room ID (1-based) for a 4x4 room block at tile (c, r)
@@ -1051,10 +1139,7 @@ function rotateActiveSlotFurniture(delta) {
     const itemData = daycareState.furniture[activeSlotKey];
     if (!itemData || !itemData.name) return;
 
-    const masterItem = (typeof masterFurniture !== 'undefined' && masterFurniture.floorItems)
-        ? (masterFurniture.floorItems.find(i => i.name === itemData.name) ||
-            masterFurniture.wallItems.find(i => i.name === itemData.name))
-        : null;
+    const masterItem = findMasterFurnitureItem(itemData.name, activeSlotType);
 
     const maxRot = (activeSlotType === 'floor') ? 4 : 2;
     const [col, row] = activeSlotKey.includes(',') ? activeSlotKey.split(',').map(Number) : [0, 0];
@@ -1081,11 +1166,30 @@ function updateActiveSlotControls() {
 
     if (!input || !statusText) return;
 
+    const blockedMap = getBlockedFloorTilesMap();
+
+    // If the currently active slot just became blocked by a 2-slot item, deselect it
+    if (activeSlotKey && blockedMap[activeSlotKey]) {
+        activeSlotKey = null;
+        activeSlotType = null;
+        activeSlotLabel = '';
+    }
+
     document.querySelectorAll('.slot-grid-btn').forEach(btn => {
         const key = btn.dataset.slotKey;
+        const baseLabel = btn.dataset.fullLabel || btn.title || '';
         const hasItem = Boolean(daycareState.furniture[key]?.name?.trim());
-        btn.classList.toggle('active', Boolean(activeSlotKey) && key === activeSlotKey);
-        btn.classList.toggle('occupied', hasItem);
+        const blocker = blockedMap[key];
+
+        btn.disabled = Boolean(blocker);
+        btn.classList.toggle('blocked-slot', Boolean(blocker));
+        btn.classList.toggle('active', Boolean(activeSlotKey) && !blocker && key === activeSlotKey);
+        btn.classList.toggle('occupied', hasItem || Boolean(blocker));
+        btn.style.opacity = blocker ? '0.45' : '';
+        btn.style.cursor = blocker ? 'not-allowed' : '';
+        btn.title = blocker
+            ? `${baseLabel} (Occupied by ${blocker.itemName} in ${blocker.anchorLabel})`
+            : baseLabel;
     });
 
     syncFurnishingStatusAndButtons();
@@ -1127,10 +1231,15 @@ function createSlotGridButton(slot) {
     btn.type = 'button';
     btn.className = 'slot-grid-btn';
     btn.dataset.slotKey = slot.key;
+    btn.dataset.fullLabel = slot.fullLabel;
     btn.title = slot.fullLabel;
     btn.textContent = slot.shortLabel;
 
     btn.onclick = () => {
+        if (btn.disabled) return;
+        const blockedMap = getBlockedFloorTilesMap();
+        if (blockedMap[slot.key]) return;
+
         activeSlotKey = slot.key;
         activeSlotType = slot.type;
         activeSlotLabel = slot.shortLabel;
@@ -1162,7 +1271,11 @@ function buildDynamicFurnitureSlots() {
         return;
     }
 
-    const existingMatch = activeSlotKey ? roomSlots.find(s => s.key === activeSlotKey) : null;
+    const blockedMap = getBlockedFloorTilesMap();
+    const existingMatch = (activeSlotKey && !blockedMap[activeSlotKey])
+        ? roomSlots.find(s => s.key === activeSlotKey)
+        : null;
+
     if (existingMatch) {
         activeSlotKey = existingMatch.key;
         activeSlotType = existingMatch.type;
@@ -1278,7 +1391,16 @@ function buildDynamicFurnitureSlots() {
         if (!val.trim()) {
             delete daycareState.furniture[activeSlotKey];
         } else {
-            if (!daycareState.furniture[activeSlotKey]) {
+            const matchedItem = findMasterFurnitureItem(val, activeSlotType);
+            if (activeSlotType === 'floor' && matchedItem && matchedItem.is2Slot) {
+                const [c, r] = activeSlotKey.split(',').map(Number);
+                const validRot = [0, 1, 2, 3].find(rot => canPlaceOrRotate2Slot(c, r, matchedItem, rot));
+                if (validRot === undefined) {
+                    renderFurnitureDropdown(val);
+                    return;
+                }
+                daycareState.furniture[activeSlotKey] = { name: matchedItem.name, rotation: validRot };
+            } else if (!daycareState.furniture[activeSlotKey]) {
                 daycareState.furniture[activeSlotKey] = { name: val, rotation: 0 };
             } else {
                 daycareState.furniture[activeSlotKey].name = val;
@@ -1323,13 +1445,33 @@ function renderFurnitureDropdown(filter = '') {
     if (filtered.length === 0) {
         dropdown.innerHTML = '<div class="dropdown-no-results">No matching items</div>';
     } else {
+        const [col, row] = activeSlotKey.includes(',') ? activeSlotKey.split(',').map(Number) : [0, 0];
+
         filtered.forEach(itemData => {
+            let validRot = 0;
+            let canFit = true;
+
+            if (activeSlotType === 'floor' && itemData.is2Slot) {
+                const foundRot = [0, 1, 2, 3].find(rot => canPlaceOrRotate2Slot(col, row, itemData, rot));
+                if (foundRot === undefined) {
+                    canFit = false;
+                } else {
+                    validRot = foundRot;
+                }
+            }
+
             const div = document.createElement('div');
             div.className = 'dropdown-item';
-            div.innerHTML = `<img src="${itemData.images[0]}" alt=""><span>${itemData.name}</span>`;
+            if (!canFit) {
+                div.style.opacity = '0.45';
+                div.style.cursor = 'not-allowed';
+                div.title = 'Not enough adjacent space in this room for this 2-slot item';
+            }
+            div.innerHTML = `<img src="${itemData.images[0]}" alt=""><span>${itemData.name}${!canFit ? ' (No space)' : ''}</span>`;
             div.addEventListener('mousedown', (e) => {
                 e.preventDefault();
-                daycareState.furniture[activeSlotKey] = { name: itemData.name, rotation: 0 };
+                if (!canFit) return;
+                daycareState.furniture[activeSlotKey] = { name: itemData.name, rotation: validRot };
                 updateActiveSlotControls();
                 hideAllDropdowns();
                 renderDaycareStage();
@@ -1508,11 +1650,7 @@ function renderPlacedFurnitureForLayout(container) {
         if (!placedItem || !placedItem.name) return;
 
         const isFloorTile = key.includes(',');
-        const itemData = (typeof masterFurniture !== 'undefined')
-            ? (isFloorTile
-                ? masterFurniture.floorItems.find(i => i.name === placedItem.name)
-                : masterFurniture.wallItems.find(i => i.name === placedItem.name))
-            : null;
+        const itemData = findMasterFurnitureItem(placedItem.name, isFloorTile ? 'floor' : 'wall');
         if (!itemData || !itemData.images) return;
 
         const img = document.createElement('img');
