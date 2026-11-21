@@ -1,13 +1,13 @@
 const masterFurniture = {
     floorItems: [
         { 
-            name: "Office Chair", 
+            name: "Purple Bear Stool", 
             is2Slot: false,
             images: [
-                "Images/Furniture/Floor/chair_0.png",
-                "Images/Furniture/Floor/chair_1.png",
-                "Images/Furniture/Floor/chair_2.png",
-                "Images/Furniture/Floor/chair_3.png"
+                "Images/Furniture/1x1/Purple Bear Stool_0.png",
+                "Images/Furniture/1x1/Purple Bear Stool_1.png",
+                "Images/Furniture/1x1/Purple Bear Stool_2.png",
+                "Images/Furniture/1x1/Purple Bear Stool_3.png"
             ] 
         },
         { 
