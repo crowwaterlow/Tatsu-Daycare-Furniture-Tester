@@ -18,6 +18,100 @@ const daycareState = {
     furniture: {}  // Floor tiles ("c,r") and wall furniture slots ("room<id>-wall-<slotNum>")
 };
 
+// Fixed [x, y] pixel offsets per layout -> roomId -> slot label ("A1".."D4" or wall slot "1".."8")
+// Applies to ANY furniture placed in that room & slot across all rotations.
+const ROOM_SLOT_OFFSETS = {
+    "1x1": {
+        1: {
+            // Floor slots (A1 - D4)
+            "A1": [0, 0], "A2": [0, 0], "A3": [0, 0], "A4": [0, 0],
+            "B1": [0, 0], "B2": [0, 0], "B3": [0, 0], "B4": [0, 0],
+            "C1": [0, 0], "C2": [0, 0], "C3": [0, 0], "C4": [0, 0],
+            "D1": [0, 0], "D2": [0, 0], "D3": [0, 0], "D4": [0, 0],
+            // Wall slots (1-8)
+            "1": [0, 0], "2": [0, 0], "3": [0, 0], "4": [0, 0],
+            "5": [0, 0], "6": [0, 0], "7": [0, 0], "8": [0, 0]
+        },
+    },
+    "3x3": {
+        1: {
+            // Floor slots (A1 - D4)
+            "A1": [0, 0], "A2": [0, 0], "A3": [0, 0], "A4": [0, 0],
+            "B1": [0, 0], "B2": [0, 0], "B3": [0, 0], "B4": [0, 0],
+            "C1": [0, 0], "C2": [0, 0], "C3": [0, 0], "C4": [0, 0],
+            "D1": [0, 0], "D2": [0, 0], "D3": [0, 0], "D4": [0, 0],
+            // Wall slots (1-8)
+            "1": [0, 0], "2": [0, 0], "3": [0, 0], "4": [0, 0],
+            "5": [0, 0], "6": [0, 0], "7": [0, 0], "8": [0, 0]
+        },
+        2: {
+            // Floor slots (A1 - D4)
+            "A1": [0, 0], "A2": [0, 0], "A3": [0, 0], "A4": [0, 0],
+            "B1": [0, 0], "B2": [0, 0], "B3": [0, 0], "B4": [0, 0],
+            "C1": [0, 0], "C2": [0, 0], "C3": [0, 0], "C4": [0, 0],
+            "D1": [0, 0], "D2": [0, 0], "D3": [0, 0], "D4": [0, 0],
+            // Wall slots (1-4)
+            "1": [0, 0], "2": [0, 0], "3": [0, 0], "4": [0, 0]
+        },
+        3: {
+            // Floor slots (A1 - D4)
+            "A1": [0, 0], "A2": [0, 0], "A3": [0, 0], "A4": [0, 0],
+            "B1": [0, 0], "B2": [0, 0], "B3": [0, 0], "B4": [0, 0],
+            "C1": [0, 0], "C2": [0, 0], "C3": [0, 0], "C4": [0, 0],
+            "D1": [0, 0], "D2": [0, 0], "D3": [0, 0], "D4": [0, 0],
+            // Wall slots (5-8)
+            "5": [0, 0], "6": [0, 0], "7": [0, 0], "8": [0, 0]
+        },
+        4: {
+            // Floor slots (A1 - D4)
+            "A1": [0, 0], "A2": [0, 0], "A3": [0, 0], "A4": [0, 0],
+            "B1": [0, 0], "B2": [0, 0], "B3": [0, 0], "B4": [0, 0],
+            "C1": [0, 0], "C2": [0, 0], "C3": [0, 0], "C4": [0, 0],
+            "D1": [0, 0], "D2": [0, 0], "D3": [0, 0], "D4": [0, 0],
+            // Wall slots (1-4)
+            "1": [0, 0], "2": [0, 0], "3": [0, 0], "4": [0, 0]
+        },
+        5: {
+            // Floor slots (A1 - D4)
+            "A1": [0, 0], "A2": [0, 0], "A3": [0, 0], "A4": [0, 0],
+            "B1": [0, 0], "B2": [0, 0], "B3": [0, 0], "B4": [0, 0],
+            "C1": [0, 0], "C2": [0, 0], "C3": [0, 0], "C4": [0, 0],
+            "D1": [0, 0], "D2": [0, 0], "D3": [0, 0], "D4": [0, 0]
+        },
+        6: {
+            // Floor slots (A1 - D4)
+            "A1": [0, 0], "A2": [0, 0], "A3": [0, 0], "A4": [0, 0],
+            "B1": [0, 0], "B2": [0, 0], "B3": [0, 0], "B4": [0, 0],
+            "C1": [0, 0], "C2": [0, 0], "C3": [0, 0], "C4": [0, 0],
+            "D1": [0, 0], "D2": [0, 0], "D3": [0, 0], "D4": [0, 0],
+            // Wall slots (5-8)
+            "5": [0, 0], "6": [0, 0], "7": [0, 0], "8": [0, 0]
+        },
+        7: {
+            // Floor slots (A1 - D4)
+            "A1": [0, 0], "A2": [0, 0], "A3": [0, 0], "A4": [0, 0],
+            "B1": [0, 0], "B2": [0, 0], "B3": [0, 0], "B4": [0, 0],
+            "C1": [0, 0], "C2": [0, 0], "C3": [0, 0], "C4": [0, 0],
+            "D1": [0, 0], "D2": [0, 0], "D3": [0, 0], "D4": [0, 0]
+        },
+        8: {
+            // Floor slots (A1 - D4)
+            "A1": [0, 0], "A2": [0, 0], "A3": [0, 0], "A4": [0, 0],
+            "B1": [0, 0], "B2": [0, 0], "B3": [0, 0], "B4": [0, 0],
+            "C1": [0, 0], "C2": [0, 0], "C3": [0, 0], "C4": [0, 0],
+            "D1": [0, 0], "D2": [0, 0], "D3": [0, 0], "D4": [0, 0]
+        },
+        9: {
+            // Floor slots (A1 - D4)
+            "A1": [0, 0], "A2": [0, 0], "A3": [0, 0], "A4": [0, 0],
+            "B1": [0, 0], "B2": [0, 0], "B3": [0, 0], "B4": [0, 0],
+            "C1": [0, 0], "C2": [0, 0], "C3": [0, 0], "C4": [0, 0],
+            "D1": [0, 0], "D2": [0, 0], "D3": [0, 0], "D4": [0, 0]
+        }
+    }
+};
+
+
 const FALLBACK_LAYOUTS = [
     { name: "1x1 Daycare", cols: 4, rows: 4, baseImage: "Images/Rooms/1x1 Daycare.png" },
     { name: "1x2 Daycare", cols: 4, rows: 8, baseImage: "Images/Rooms/1x2 Daycare.png" },
@@ -103,6 +197,51 @@ function getLayoutKey(layout) {
     if (layout.cols === 12 && layout.rows === 8) return "3x2";
     if (layout.cols === 12 && layout.rows === 12) return "3x3";
     return "1x1";
+}
+
+function parseOffsetPair(entry) {
+    if (!entry) return null;
+    if (Array.isArray(entry) && entry.length >= 2) {
+        return { x: Number(entry[0]) || 0, y: Number(entry[1]) || 0 };
+    }
+    if (typeof entry === 'object' && ('x' in entry || 'y' in entry)) {
+        return { x: Number(entry.x) || 0, y: Number(entry.y) || 0 };
+    }
+    return null;
+}
+
+function getSlotPlacementOffset(slotKey) {
+    if (!currentLayout || !slotKey) return { x: 0, y: 0 };
+
+    const layoutKey = getLayoutKey(currentLayout);
+    const byLayout = ROOM_SLOT_OFFSETS[layoutKey];
+    if (!byLayout) return { x: 0, y: 0 };
+
+    let roomId = activeRoomId;
+    let slotLabel = '';
+
+    if (slotKey.includes(',')) {
+        const [c, r] = slotKey.split(',').map(Number);
+        roomId = getRoomIdForTile(c, r);
+        const rawLabel = (typeof currentLayout.getCustomSlotLabel === 'function')
+            ? currentLayout.getCustomSlotLabel(c, r)
+            : getFallbackSlotLabel(c, r);
+        slotLabel = rawLabel.replace(/^Room\s+\d+\s*[-:]?\s*/i, '') || getFallbackSlotLabel(c, r);
+    } else {
+        const parsedWall = parseWallFurnitureSlotKey(slotKey);
+        roomId = parsedWall.roomId;
+        slotLabel = String(parsedWall.slotNumber);
+    }
+
+    const byRoom = byLayout[roomId] || byLayout[String(roomId)];
+    if (!byRoom) return { x: 0, y: 0 };
+
+    return (
+        parseOffsetPair(byRoom[slotLabel]) ||
+        parseOffsetPair(byRoom[slotKey]) ||
+        parseOffsetPair(byRoom.default) ||
+        { x: 0, y: 0 }
+    );
 }
 
 function getWallSlotsForRoom(layout, roomId) {
@@ -1391,7 +1530,11 @@ function renderPlacedFurnitureForLayout(container) {
             coords = getWallFurnitureCoordinatesSafe(key);
         }
 
-        img.style.transform = `translate(calc(-50% + ${coords.x}px), calc(-50% + ${coords.y}px))`;
+        const slotOffset = getSlotPlacementOffset(key);
+        const finalX = coords.x + slotOffset.x;
+        const finalY = coords.y + slotOffset.y;
+
+        img.style.transform = `translate(calc(-50% + ${finalX}px), calc(-50% + ${finalY}px))`;
         img.style.zIndex = coords.zIndex || (isFloorTile ? 20 : 15);
         img.style.display = 'block';
 
